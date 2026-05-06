@@ -37,7 +37,7 @@ export function Hero() {
 
           {/* CTA */}
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Button render={<Link href="/audit" />} size="lg" className="gap-2 px-6">
+            <Button render={<Link href="/audit" />} nativeButton={false} size="lg" className="gap-2 px-6">
               Audit Your Stack
               <ArrowRight className="h-4 w-4" />
             </Button>

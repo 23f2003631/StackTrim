@@ -42,7 +42,7 @@ export function CtaSection() {
             2 minutes.
           </p>
           <div className="mt-8">
-            <Button render={<Link href="/audit" />} size="lg" className="gap-2 px-6">
+            <Button render={<Link href="/audit" />} nativeButton={false} size="lg" className="gap-2 px-6">
               Start Free Audit
               <ArrowRight className="h-4 w-4" />
             </Button>

@@ -38,7 +38,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-5xl px-6">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} StackTrim. Built for{" "}
+              © 2026 StackTrim. Built for{" "}
               <a
                 href="https://credex.money"
                 target="_blank"
