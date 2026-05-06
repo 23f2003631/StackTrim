@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StackTrim
 
-## Getting Started
+**Find wasted AI spend before your next invoice.**
 
-First, run the development server:
+StackTrim is a B2B SaaS audit platform that analyzes startup spending on AI tools and infrastructure subscriptions. Users enter their AI stack — tools, plans, team size, seats — and receive deterministic, explainable savings recommendations backed by real pricing data.
+
+Built for the [Credex](https://credex.money) internship assignment.
+
+## Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Run tests
+npx vitest run
+
+# Type check
+npx tsc --noEmit
+
+# Build for production
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for system design details.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Tech Stack:**
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS v4 + shadcn/ui
+- React Hook Form + Zod validation
+- Vitest for testing
+- Deterministic audit engine (no AI in financial logic)
 
-## Learn More
+**Key Directories:**
+```
+src/
+  app/              → Pages (App Router)
+  components/       → React components
+    landing/        → Landing page sections
+    audit/          → Audit form & results
+    ui/             → shadcn/ui primitives
+  lib/
+    engine/         → Audit analysis engine + pricing catalog
+    types/          → TypeScript domain types
+    validations/    → Zod schemas
+  tests/            → Vitest test suites
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Core Principle
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> **AI never decides pricing, savings, or recommendations.** Every financial calculation is deterministic, based on publicly available pricing data. AI is only used (in future) to generate a short personalized summary paragraph.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Development
 
-## Deploy on Vercel
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm run lint` | ESLint |
+| `npx tsc --noEmit` | Type checking |
+| `npx vitest run` | Run all tests |
+| `npx vitest --ui` | Test UI |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Documentation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — System design & data flow
+- [DEVLOG.md](./DEVLOG.md) — Daily development log
+- [TESTS.md](./TESTS.md) — Testing strategy
+- [PRICING_DATA.md](./PRICING_DATA.md) — Pricing data sourcing
+- [REFLECTION.md](./REFLECTION.md) — Design decisions & tradeoffs
+- [GTM.md](./GTM.md) — Go-to-market strategy
+- [ECONOMICS.md](./ECONOMICS.md) — Unit economics
+- [PROMPTS.md](./PROMPTS.md) — AI usage transparency
+- [METRICS.md](./METRICS.md) — Success metrics
+- [USER_INTERVIEWS.md](./USER_INTERVIEWS.md) — User research
+- [LANDING_COPY.md](./LANDING_COPY.md) — Messaging strategy
+
+## License
+
+Private — built for Credex evaluation.
