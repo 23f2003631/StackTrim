@@ -18,27 +18,31 @@ All pricing data in StackTrim's catalog (`src/lib/engine/catalog.ts`) is sourced
 |-------|-------------|
 | `id` | Unique kebab-case identifier |
 | `name` | Display name |
+| `vendor` | Name of the vendor company (added Day 2) |
 | `category` | Tool category |
+| `pricingModel` | How it's priced: per-seat, usage-based, flat-rate, hybrid (added Day 2) |
 | `pricingUrl` | Source URL for verification |
 | `lastVerified` | Date pricing was checked |
 | `plans[]` | Array of plan tiers with pricing |
 | `alternatives` | IDs of similar tools |
 | `hasStartupCredits` | Whether vendor offers credits |
 
-## Current Catalog (v2026.05.1)
+## Current Catalog (v2026.05.2)
 
-| Tool | Category | Plans | Last Verified |
-|------|----------|-------|---------------|
-| GitHub Copilot | AI Assistant | Free, Pro ($10), Business ($19), Enterprise ($39) | 2026-05-01 |
-| Cursor | AI Assistant | Hobby (Free), Pro ($20), Business ($40) | 2026-05-01 |
-| Codeium / Windsurf | AI Assistant | Free, Pro ($15), Teams ($30) | 2026-05-01 |
-| OpenAI API | AI API | PAYG, Plus ($20), Team ($25), Enterprise ($60) | 2026-05-01 |
-| Anthropic (Claude) | AI API | PAYG, Pro ($20), Team ($25), Enterprise ($60) | 2026-05-01 |
-| Vercel | Cloud Infra | Hobby (Free), Pro ($20), Enterprise ($50) | 2026-05-01 |
-| Hugging Face | AI Platform | Free, Pro ($9), Enterprise ($20) | 2026-05-01 |
-| Replicate | AI Platform | PAYG | 2026-05-01 |
-| Notion AI | Productivity | Free, Plus ($12), Business ($18) | 2026-05-01 |
-| Grammarly | Productivity | Free, Premium ($12), Business ($15) | 2026-05-01 |
+| Tool | Category | Model | Plans | Last Verified |
+|------|----------|-------|-------|---------------|
+| GitHub Copilot | AI Assistant | per-seat | Free, Pro ($10), Business ($19), Enterprise ($39) | 2026-05-01 |
+| Cursor | AI Assistant | per-seat | Hobby (Free), Pro ($20), Business ($40) | 2026-05-01 |
+| Codeium / Windsurf | AI Assistant | per-seat | Free, Pro ($15), Teams ($30) | 2026-05-01 |
+| v0 by Vercel | AI Assistant | per-seat | Free, Premium ($20) | 2026-05-01 |
+| OpenAI API | AI API | hybrid | PAYG, Plus ($20), Team ($25), Enterprise ($60) | 2026-05-01 |
+| Anthropic (Claude) | AI API | hybrid | PAYG, Pro ($20), Team ($25), Enterprise ($60) | 2026-05-01 |
+| Google Gemini | AI API | hybrid | Free, Advanced ($20), Workspace AI ($30) | 2026-05-01 |
+| Vercel | Cloud Infra | per-seat | Hobby (Free), Pro ($20), Enterprise ($50) | 2026-05-01 |
+| Hugging Face | AI Platform | per-seat | Free, Pro ($9), Enterprise ($20) | 2026-05-01 |
+| Replicate | AI Platform | usage-based | PAYG | 2026-05-01 |
+| Notion AI | Productivity | per-seat | Free, Plus ($12), Business ($18) | 2026-05-01 |
+| Grammarly | Productivity | per-seat | Free, Premium ($12), Business ($15) | 2026-05-01 |
 
 ## Staleness Risk
 

@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     name: Quality Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -31,7 +36,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Run tests
-        run: npx vitest run
+        run: npx vitest run --reporter=verbose
 
       - name: Build
         run: npm run build

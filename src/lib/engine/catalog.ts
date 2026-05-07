@@ -7,6 +7,9 @@
  *
  * This is the ONLY source of truth for pricing in the audit engine.
  * AI never decides prices. Prices are deterministic lookups.
+ *
+ * @module engine/catalog
+ * @version 2026.05.2 — Day 2: added pricingModel, vendor fields
  */
 
 import type { ToolCatalogEntry, PricingCatalog } from "@/lib/types/catalog";
@@ -18,7 +21,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "github-copilot",
     name: "GitHub Copilot",
+    vendor: "GitHub / Microsoft",
     category: "ai-assistant",
+    pricingModel: "per-seat",
     pricingUrl: "https://github.com/features/copilot#pricing",
     lastVerified: "2026-05-01",
     plans: [
@@ -47,6 +52,7 @@ const tools: ToolCatalogEntry[] = [
         name: "Enterprise",
         monthlyPricePerSeat: 39,
         features: ["Everything in Business", "Fine-tuned models", "Knowledge bases"],
+        minSeats: 25,
       },
     ],
     alternatives: ["cursor", "codeium"],
@@ -54,7 +60,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "cursor",
     name: "Cursor",
+    vendor: "Anysphere",
     category: "ai-assistant",
+    pricingModel: "per-seat",
     pricingUrl: "https://cursor.com/pricing",
     lastVerified: "2026-05-01",
     plans: [
@@ -85,7 +93,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "codeium",
     name: "Codeium / Windsurf",
+    vendor: "Codeium",
     category: "ai-assistant",
+    pricingModel: "per-seat",
     pricingUrl: "https://codeium.com/pricing",
     lastVerified: "2026-05-01",
     plans: [
@@ -118,7 +128,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "openai-api",
     name: "OpenAI API",
+    vendor: "OpenAI",
     category: "ai-api",
+    pricingModel: "hybrid",
     pricingUrl: "https://openai.com/pricing",
     lastVerified: "2026-05-01",
     hasStartupCredits: true,
@@ -147,6 +159,8 @@ const tools: ToolCatalogEntry[] = [
         name: "ChatGPT Enterprise",
         monthlyPricePerSeat: 60,
         features: ["Unlimited GPT-4o", "Admin console", "SSO", "Data privacy"],
+        requiresSalesContact: true,
+        minSeats: 50,
       },
     ],
     alternatives: ["anthropic-api"],
@@ -154,7 +168,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "anthropic-api",
     name: "Anthropic (Claude)",
+    vendor: "Anthropic",
     category: "ai-api",
+    pricingModel: "hybrid",
     pricingUrl: "https://anthropic.com/pricing",
     lastVerified: "2026-05-01",
     hasStartupCredits: true,
@@ -183,9 +199,44 @@ const tools: ToolCatalogEntry[] = [
         name: "Claude Enterprise",
         monthlyPricePerSeat: 60,
         features: ["Unlimited usage", "SSO", "Audit logs", "Custom retention"],
+        requiresSalesContact: true,
+        minSeats: 25,
       },
     ],
     alternatives: ["openai-api"],
+  },
+  {
+    id: "google-gemini",
+    name: "Google Gemini",
+    vendor: "Google",
+    category: "ai-api",
+    pricingModel: "hybrid",
+    pricingUrl: "https://ai.google.dev/pricing",
+    lastVerified: "2026-05-01",
+    hasStartupCredits: true,
+    creditNotes: "Google Cloud for Startups program offers up to $350K in credits.",
+    plans: [
+      {
+        id: "free",
+        name: "Free",
+        monthlyPricePerSeat: 0,
+        features: ["Gemini API free tier", "Rate limited"],
+        limits: { requests_per_minute: 15 },
+      },
+      {
+        id: "pro",
+        name: "Gemini Advanced",
+        monthlyPricePerSeat: 20,
+        features: ["1M token context", "Gemini Ultra", "Google One AI Premium"],
+      },
+      {
+        id: "business",
+        name: "Google Workspace AI",
+        monthlyPricePerSeat: 30,
+        features: ["Gemini in Workspace apps", "Enterprise security", "Admin controls"],
+      },
+    ],
+    alternatives: ["openai-api", "anthropic-api"],
   },
 
   // -------------------------------------------------------------------------
@@ -194,7 +245,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "vercel",
     name: "Vercel",
+    vendor: "Vercel",
     category: "cloud-infra",
+    pricingModel: "per-seat",
     pricingUrl: "https://vercel.com/pricing",
     lastVerified: "2026-05-01",
     plans: [
@@ -218,6 +271,7 @@ const tools: ToolCatalogEntry[] = [
         name: "Enterprise",
         monthlyPricePerSeat: 50,
         features: ["SLA", "Advanced security", "Priority support", "Custom limits"],
+        requiresSalesContact: true,
       },
     ],
   },
@@ -228,7 +282,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "huggingface",
     name: "Hugging Face",
+    vendor: "Hugging Face",
     category: "ai-platform",
+    pricingModel: "per-seat",
     pricingUrl: "https://huggingface.co/pricing",
     lastVerified: "2026-05-01",
     plans: [
@@ -256,7 +312,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "replicate",
     name: "Replicate",
+    vendor: "Replicate",
     category: "ai-platform",
+    pricingModel: "usage-based",
     pricingUrl: "https://replicate.com/pricing",
     lastVerified: "2026-05-01",
     plans: [
@@ -275,7 +333,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "notion-ai",
     name: "Notion AI",
+    vendor: "Notion",
     category: "productivity",
+    pricingModel: "per-seat",
     pricingUrl: "https://notion.so/pricing",
     lastVerified: "2026-05-01",
     plans: [
@@ -303,7 +363,9 @@ const tools: ToolCatalogEntry[] = [
   {
     id: "grammarly",
     name: "Grammarly",
+    vendor: "Grammarly",
     category: "productivity",
+    pricingModel: "per-seat",
     pricingUrl: "https://grammarly.com/plans",
     lastVerified: "2026-05-01",
     plans: [
@@ -327,12 +389,42 @@ const tools: ToolCatalogEntry[] = [
       },
     ],
   },
+
+  // -------------------------------------------------------------------------
+  // v0 (Vercel's AI code generation)
+  // -------------------------------------------------------------------------
+  {
+    id: "v0",
+    name: "v0 by Vercel",
+    vendor: "Vercel",
+    category: "ai-assistant",
+    pricingModel: "per-seat",
+    pricingUrl: "https://v0.dev/pricing",
+    lastVerified: "2026-05-01",
+    plans: [
+      {
+        id: "free",
+        name: "Free",
+        monthlyPricePerSeat: 0,
+        features: ["Limited generations", "Basic models"],
+        limits: { generations_per_month: 200 },
+      },
+      {
+        id: "premium",
+        name: "Premium",
+        monthlyPricePerSeat: 20,
+        features: ["Unlimited generations", "Advanced models", "Priority queue"],
+        recommended: true,
+      },
+    ],
+    alternatives: ["cursor", "github-copilot"],
+  },
 ];
 
 /** The complete pricing catalog */
 export const pricingCatalog: PricingCatalog = {
-  version: "2026.05.1",
-  lastUpdated: "2026-05-01",
+  version: "2026.05.2",
+  lastUpdated: "2026-05-07",
   tools,
 };
 
@@ -365,4 +457,20 @@ export function getToolsByCategory(category: string): ToolCatalogEntry[] {
 /** Get all unique categories */
 export function getCategories(): string[] {
   return [...new Set(pricingCatalog.tools.map((t) => t.category))];
+}
+
+/** Get the cheapest non-free plan for a tool (useful for downgrade recommendations) */
+export function getCheapestPaidPlan(toolId: string) {
+  const tool = getToolById(toolId);
+  if (!tool) return undefined;
+  return tool.plans.find((p) => p.monthlyPricePerSeat > 0);
+}
+
+/** Get all tools that share the same alternatives list */
+export function getAlternatives(toolId: string): ToolCatalogEntry[] {
+  const tool = getToolById(toolId);
+  if (!tool?.alternatives) return [];
+  return tool.alternatives
+    .map(getToolById)
+    .filter((t): t is ToolCatalogEntry => t !== undefined);
 }

@@ -19,10 +19,11 @@ Zod Validation (src/lib/validations/)
     │
     ▼
 Audit Engine (src/lib/engine/analyzer.ts)
-    │   ├── Reads from: Pricing Catalog (src/lib/engine/catalog.ts)
-    │   ├── Applies: Rightsizing analysis
-    │   ├── Applies: Downgrade detection
-    │   └── Applies: Credit program matching
+    │   ├── Pricing Catalog (src/lib/engine/catalog.ts)
+    │   ├── Calculation Layer (src/lib/engine/calculations.ts) [New Day 2]
+    │   ├── Confidence Scoring (src/lib/engine/confidence.ts) [New Day 2]
+    │   ├── Applies: Rightsizing, Downgrades, Credits
+    │   └── Applies: Cross-tool Overlaps & Consolidations [New Day 2]
     │
     ▼
 Audit Result (typed, deterministic)

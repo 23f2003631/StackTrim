@@ -38,6 +38,31 @@
 
 ~3 hours of focused execution.
 
+## Day 2 — Audit Engine Foundation
+
+**Date:** 2026-05-07
+**Focus:** Pure calculation utilities, confidence scoring, overlap detection, PII sanitization
+
+### What I built
+
+1. **Calculations Library** — Extracted all math into pure, deterministic functions (`calculations.ts`)
+2. **Confidence Scoring** — Objective factor-based system for high/medium/low trust signals (`confidence.ts`)
+3. **Enhanced Analyzer** — Added consolidation logic (overlap detection) and "Keep" recommendations (`analyzer.ts`)
+4. **Public Snapshot** — Built PII sanitization layer to prepare for shareable URLs (`snapshot.ts`)
+5. **Catalog Expansion** — Added pricingModel, vendor, Google Gemini, and v0 by Vercel
+6. **Results UI** — Added formula breakdowns, confidence badges, and overlap alerts
+7. **Comprehensive Testing** — Scaled from 23 to 126 tests covering all engine logic
+
+### Key decisions
+
+- **Math transparency**: Every recommendation now includes a readable `formula` string.
+- **Conservative consolidation**: We assume the cheapest tool is dropped when consolidating overlapping tools.
+- **Factor-based confidence**: Instead of hardcoding confidence, we derive it from factors like pricing freshness and usage assumptions.
+
+### Time spent
+
+~2 hours.
+
 ---
 
 *Entries will be added daily as development continues.*

@@ -1,12 +1,10 @@
 "use client";
 
-import { ArrowLeft, TrendingDown, DollarSign, Lightbulb } from "lucide-react";
+import { ArrowLeft, TrendingDown, DollarSign, Lightbulb, Shield, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +21,9 @@ const TYPE_LABELS: Record<string, string> = {
   credit: "Credit Opportunity",
   eliminate: "Eliminate",
   rightsize: "Rightsize",
+  keep: "Optimized",
+  "switch-vendor": "Switch Vendor",
+  "review-api-usage": "Review API",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -31,12 +32,21 @@ const TYPE_COLORS: Record<string, string> = {
   credit: "bg-purple-50 text-purple-700 border-purple-200",
   eliminate: "bg-red-50 text-red-700 border-red-200",
   rightsize: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  keep: "bg-slate-50 text-slate-600 border-slate-200",
+  "switch-vendor": "bg-orange-50 text-orange-700 border-orange-200",
+  "review-api-usage": "bg-cyan-50 text-cyan-700 border-cyan-200",
 };
 
 const CONFIDENCE_LABELS: Record<string, string> = {
   high: "High confidence",
   medium: "Medium confidence",
   low: "Explore",
+};
+
+const CONFIDENCE_COLORS: Record<string, string> = {
+  high: "text-emerald-600",
+  medium: "text-amber-600",
+  low: "text-slate-500",
 };
 
 function formatCurrency(amount: number): string {
@@ -49,25 +59,37 @@ function formatCurrency(amount: number): string {
 }
 
 function RecommendationCard({ rec }: { rec: Recommendation }) {
+  const isKeep = rec.type === "keep";
+
   return (
-    <Card className="overflow-hidden">
+    <Card className={`overflow-hidden ${isKeep ? "opacity-75" : ""}`}>
       <CardContent className="pt-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
+              {isKeep && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
               <h3 className="text-sm font-semibold">{rec.toolName}</h3>
               <span
                 className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[rec.type] || ""}`}
               >
                 {TYPE_LABELS[rec.type] || rec.type}
               </span>
-              <Badge variant="outline" className="text-xs">
+              <Badge
+                variant="outline"
+                className={`text-xs ${CONFIDENCE_COLORS[rec.confidence] || ""}`}
+              >
                 {CONFIDENCE_LABELS[rec.confidence]}
               </Badge>
             </div>
             <p className="text-sm leading-relaxed text-muted-foreground">
               {rec.reasoning}
             </p>
+            {/* Calculation transparency */}
+            {rec.calculation && (
+              <p className="text-xs text-muted-foreground/80 font-mono bg-secondary/50 rounded px-2 py-1 inline-block">
+                {rec.calculation.formula}
+              </p>
+            )}
           </div>
           {rec.monthlySavings > 0 && (
             <div className="text-right shrink-0">
@@ -89,6 +111,9 @@ export function AuditResults({ result, onReset }: AuditResultsProps) {
   );
   const creditRecs = result.recommendations.filter(
     (r) => r.type === "credit"
+  );
+  const keepRecs = result.recommendations.filter(
+    (r) => r.type === "keep"
   );
 
   return (
@@ -153,6 +178,21 @@ export function AuditResults({ result, onReset }: AuditResultsProps) {
         </Card>
       </div>
 
+      {/* Overlap Alert */}
+      {result.hasOverlappingTools && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 flex items-start gap-3">
+          <Shield className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">
+              Overlapping tools detected
+            </p>
+            <p className="text-xs text-amber-700 mt-1">
+              You have multiple tools in the same category. Consolidation may reduce costs without losing capability.
+            </p>
+          </div>
+        </div>
+      )}
+
       <Separator />
 
       {/* Actionable Recommendations */}
@@ -190,7 +230,24 @@ export function AuditResults({ result, onReset }: AuditResultsProps) {
         </div>
       )}
 
-      {/* No recommendations */}
+      {/* Already Optimized Tools */}
+      {keepRecs.length > 0 && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-base font-semibold">
+              Already Optimized ({keepRecs.length})
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              These tools look well-configured. No changes needed.
+            </p>
+          </div>
+          {keepRecs.map((rec, i) => (
+            <RecommendationCard key={i} rec={rec} />
+          ))}
+        </div>
+      )}
+
+      {/* No recommendations at all */}
       {result.recommendations.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
@@ -205,7 +262,7 @@ export function AuditResults({ result, onReset }: AuditResultsProps) {
       <div className="rounded-lg border border-border/60 bg-secondary/30 p-4">
         <p className="text-xs text-muted-foreground leading-relaxed">
           <strong>Methodology:</strong> All recommendations are based on
-          publicly available pricing data verified as of May 2026. Savings
+          publicly available pricing data (catalog v{result.catalogVersion}). Savings
           estimates are conservative and based on catalog pricing — actual
           savings may vary based on negotiated rates, usage patterns, and
           contract terms. No AI was used to generate these financial

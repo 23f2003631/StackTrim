@@ -47,8 +47,8 @@ export function SpendForm() {
     watch,
     setValue,
     formState: { errors },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<AuditInputForm>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(auditInputSchema) as any,
     defaultValues: {
       companyName: "",
@@ -62,6 +62,7 @@ export function SpendForm() {
     name: "tools",
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedTools = watch("tools");
 
   function onSubmit(data: AuditInputForm) {
