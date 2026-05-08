@@ -1,264 +1,60 @@
-# PROJECT_MEMORY.md — StackTrim Engineering Memory
+# PROJECT MEMORY
 
-> **Purpose:** Long-term engineering memory, implementation ledger, and context restoration system for AI-assisted development sessions. Future Day-3+ prompts depend on this file.
+## Mission
+Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS founders and engineering leaders. The product must feel premium, trustworthy, financially literate, and operationally mature.
 
----
+## Execution Ledger
 
-## Project Identity
+### Day 1: Foundation
+- Scaffolding with Next.js App Router, Tailwind v4, Shadcn UI.
+- Deterministic analysis engine core built (`lib/engine/calculations.ts`).
+- Pricing catalog architecture established (`lib/engine/catalog.ts`).
+- Premium landing page and CTA developed.
 
-| Field | Value |
-|-------|-------|
-| Product | StackTrim |
-| Positioning | "Find wasted AI spend before your next invoice." |
-| Category | B2B SaaS AI spend audit platform |
-| Repo | `e:\Credex` |
-| Framework | Next.js 16 (App Router) + TypeScript |
-| Styling | Tailwind CSS v4 + shadcn/ui |
-| Testing | Vitest 4 |
-| CI | GitHub Actions (lint → typecheck → test → build) |
+### Day 2: Testability & Confidence
+- Implemented robust confidence scoring (`lib/engine/confidence.ts`) for tool recommendations (e.g. HIGH/MEDIUM/LOW confidence).
+- Separated public snapshot generation to enforce privacy boundaries (`lib/engine/snapshot.ts`).
+- Setup CI workflows for deterministic automated testing.
+- Overhauled test suites (126 deterministic tests passing).
 
----
+### Day 3: Backend Persistence & SaaS Execution
+- **Architecture Shift**: Transformed from a purely client-side evaluation tool to a persistent, backend-driven SaaS.
+- **Supabase Integration**:
+  - Implemented **Option A Architecture**. 
+  - `audits`, `leads`, and `events` tables constructed.
+  - Strict Server/Client boundary: `SUPABASE_SERVICE_ROLE_KEY` is isolated in `src/lib/supabase/server.ts` and never leaks to the client.
+  - RLS strictly enabled for a default-deny posture on all tables.
+- **Route Handlers**: Created `POST /api/audit` to execute the audit deterministically on the server, ensuring client cannot manipulate results before persistence.
+- **Public Share URLs**:
+  - Generated non-sequential, non-guessable, URL-safe slugs using `nanoid`.
+  - Implemented `/share/[slug]` route for public snapshot rendering.
+  - Snapshot logic strictly strips PII (company, email) before Database persistence to `public_snapshot` JSON column.
+- **Form Persistence**:
+  - Developed robust LocalStorage syncing in `SpendForm` to protect user data from accidental reloads.
+- **Premium UX Overhaul (Screenshot Priority)**:
+  - Redesigned `AuditResults` hero section to heavily emphasize "Monthly Savings" and "Annual Savings" using premium gradients and layout.
+  - Upgraded `RecommendationCard` to clearly show rationale, calculation methodology, confidence scores, and current/future spend.
+  - Implemented an "Honest Empty State" when no savings are found, rather than manufacturing fake savings.
 
-## Architecture Overview
+## Next.js App Router Pitfalls & Fixes (Day 3 Addendum)
+- **Asynchronous Route Params**: In Next.js 15+, `params` passed to pages and layouts is a Promise. Accessing properties synchronously (e.g., `params.slug`) evaluates to `undefined`, which caused the Supabase query `.eq("slug", params.slug)` to silently fail and trigger the 404 `notFound()` fallback. The page was updated to explicitly `await params` (`const { slug } = await params;`).
+- **Supabase Environment Variables**: Ensure `NEXT_PUBLIC_SUPABASE_URL` is a fully qualified URL (e.g., `https://[ref].supabase.co`). Missing the protocol causes silent URL parsing failures.
 
-```
-src/
-├── app/                    → Next.js App Router pages
-│   ├── page.tsx            → Landing page
-│   ├── audit/page.tsx      → Audit form page
-│   ├── layout.tsx          → Root layout (Geist font)
-│   └── globals.css         → Tailwind base styles
-├── components/
-│   ├── audit/
-│   │   ├── spend-form.tsx  → React Hook Form + Zod, dynamic tool entries
-│   │   └── audit-results.tsx → Results display with recommendations
-│   ├── landing/
-│   │   ├── hero.tsx        → Hero section
-│   │   ├── value-props.tsx → Value proposition cards
-│   │   └── cta-section.tsx → Call-to-action
-│   └── ui/                 → shadcn/ui primitives
-├── lib/
-│   ├── engine/
-│   │   ├── analyzer.ts     → Core audit engine (main entry: generateAuditResult)
-│   │   ├── catalog.ts      → Pricing catalog (12 tools, verified May 2026)
-│   │   ├── calculations.ts → Pure financial math functions [NEW Day 2]
-│   │   ├── confidence.ts   → Confidence scoring system [NEW Day 2]
-│   │   └── snapshot.ts     → Public audit snapshot sanitization [NEW Day 2]
-│   ├── types/
-│   │   ├── audit.ts        → Domain types: AuditInput, AuditResult, Recommendation, PublicAuditSnapshot
-│   │   └── catalog.ts      → Catalog types: ToolCatalogEntry, PlanTier, PricingModel
-│   ├── validations/
-│   │   └── audit.ts        → Zod schemas for form validation
-│   ├── constants.ts        → App-wide constants
-│   └── utils.ts            → cn() utility
-└── tests/
-    ├── setup.ts            → Vitest + jest-dom setup
-    └── engine/
-        ├── analyzer.test.ts    → 28 tests: per-tool, overlap, keep, edge cases
-        ├── catalog.test.ts     → 29 tests: integrity, lookups, specific tools
-        ├── calculations.test.ts → 38 tests: all pure math functions [NEW Day 2]
-        ├── confidence.test.ts  → 18 tests: scoring, factors, staleness [NEW Day 2]
-        └── snapshot.test.ts    → 13 tests: PII sanitization [NEW Day 2]
-```
+## File Structure Map
+- `src/app/api/audit/route.ts` - Central processing and DB persistence handler.
+- `src/app/share/[slug]/page.tsx` - Public, sanitized result page.
+- `src/components/audit/spend-form.tsx` - Complex dynamic form with LocalStorage recovery.
+- `src/components/audit/audit-results.tsx` - Premium financial result presentation.
+- `src/lib/supabase/` - Client and server boundaries for Supabase.
+- `supabase/migrations/` - SQL migration source of truth.
+- `SUPABASE_SETUP.md` - Mandatory setup instructions and architectural rationale.
 
----
+## Future Context (Day 4+)
+- **Lead Capture**: We have a `leads` table ready. Future implementation should gate high-value details behind an email capture or offer a "book a consultation" flow.
+- **Analytics**: The `events` table is primed for funnel tracking.
+- **Benchmark Mode**: Result metadata includes `hasHighSavings` and `optimizedToolCount` to enable future industry benchmarking dashboards.
 
-## Day 1 — Foundation (2026-05-07)
-
-### What was built
-1. Next.js 16 project scaffold with TypeScript + Tailwind v4 + shadcn/ui
-2. Basic domain types: `AuditInput`, `AuditResult`, `Recommendation`
-3. Pricing catalog: 10 tools with verified public pricing
-4. Audit engine: rightsizing, downgrades, credit matching
-5. Landing page: hero, value props, CTA
-6. Spend form: React Hook Form + Zod, dynamic tool entries
-7. Results UI: summary cards, recommendation cards
-8. 23 tests (catalog integrity + analyzer logic)
-9. CI pipeline: lint → typecheck → test → build
-10. 12 root markdown documentation files
-
-### Key decisions
-- Client-side engine first (pure functions, no API)
-- Conservative 15% threshold for downgrade recommendations
-- Real verified pricing data (not estimates)
-- No auth — deliver value before asking anything
-
----
-
-## Day 2 — Audit Engine Foundation (2026-05-07)
-
-### What was built
-
-#### 1. Enhanced Domain Types (`src/lib/types/audit.ts`)
-- Added `RecommendationType` variants: `"keep"`, `"switch-vendor"`, `"review-api-usage"`
-- Added `CalculationBreakdown` interface for transparent math display
-- Added `PublicAuditSnapshot` + `PublicRecommendation` types for share URL architecture
-- Added `ConfidenceReason` for explaining why confidence was assigned
-- Added `email`, `notes` fields to `AuditInput` (stripped in public snapshots)
-- Added `catalogVersion`, `hasOverlappingTools`, `optimizedToolCount` to `AuditResult`
-- Added `AuditSummary` with `totalAnnualSavings` and `savingsPercentage`
-
-#### 2. Catalog Types Enhancement (`src/lib/types/catalog.ts`)
-- Added `PricingModel` type: `"per-seat" | "usage-based" | "flat-rate" | "hybrid"`
-- Added `vendor` field to `ToolCatalogEntry`
-- Added `requiresSalesContact` and `minSeats` to `PlanTier`
-
-#### 3. Pricing Catalog Expansion (`src/lib/engine/catalog.ts`)
-- Added Google Gemini (ai-api, 3 plans, startup credits)
-- Added v0 by Vercel (ai-assistant, 2 plans)
-- All 12 tools now have `pricingModel` and `vendor` fields
-- Added `getCheapestPaidPlan()` and `getAlternatives()` helpers
-- Bumped catalog version to `2026.05.2`
-
-#### 4. Pure Calculation Utilities (`src/lib/engine/calculations.ts`) [NEW]
-- `roundCurrency()` — 2-decimal financial rounding
-- `monthlyToAnnual()` / `annualToMonthly()` — period conversions
-- `seatCost()` — seat × price calculation
-- `excessSeats()` / `excessSeatSavings()` — rightsizing math
-- `downgradeSavings()` — plan comparison
-- `isSignificantSavings()` — 15% threshold check
-- `findOverlappingTools()` — category-based overlap detection
-- `consolidationSavings()` — conservative min-of-two savings
-- `savingsPercentage()` / `isHighSavings()` — threshold helpers
-- `normalizeToPerSeat()` — spend normalization
-- `detectOverpayment()` — catalog vs. reported spend mismatch
-- Formula builders: `rightsizingFormula()`, `downgradeFormula()`, `consolidationFormula()`
-
-#### 5. Confidence Scoring System (`src/lib/engine/confidence.ts`) [NEW]
-- Factor-based scoring: `ConfidenceFactors` interface
-- `scoreConfidence()` — objective factor → HIGH/MEDIUM/LOW with reasoning
-- Per-type helpers: `rightsizingConfidence()`, `downgradeConfidence()`, `consolidationConfidence()`, `creditConfidence()`
-- `isPricingFresh()` — 90-day staleness check
-- `defaultConfidenceForType()` — conservative defaults per recommendation type
-
-#### 6. Public Snapshot Architecture (`src/lib/engine/snapshot.ts`) [NEW]
-- `createPublicSnapshot()` — strips email, company name, notes, toolIds, calculation details
-- `validateSnapshotPrivacy()` — defense-in-depth PII check (email regex + structural)
-- Designed for future `/share/:id` route
-
-#### 7. Enhanced Audit Engine (`src/lib/engine/analyzer.ts`)
-- Phase 1: Per-tool analysis (rightsizing, downgrades, credits) — now with CalculationBreakdown
-- Phase 2: Cross-tool overlap/consolidation detection (`analyzeToolOverlaps`)
-- Phase 3: "Keep" recommendations for already-optimized tools (trust signal)
-- Phase 4: Priority ranking by savings impact
-- Phase 5: Aggregate totals with catalogVersion tracking
-- All recommendations now use `scoreConfidence()` instead of hardcoded levels
-
-#### 8. Updated Audit Results UI (`src/components/audit/audit-results.tsx`)
-- Shows "Already Optimized" section for keep recommendations
-- Shows overlap alert banner when duplicate-category tools detected
-- Displays calculation formula in monospace for transparency
-- Color-coded confidence badges (green/amber/slate)
-- Shows catalog version in methodology disclaimer
-
-#### 9. Comprehensive Test Suite
-- **126 total tests** (from 23 on Day 1)
-- `calculations.test.ts`: 38 tests — every pure function, edge cases, boundary values
-- `confidence.test.ts`: 18 tests — scoring, factor builders, staleness
-- `snapshot.test.ts`: 13 tests — PII sanitization, privacy validation
-- `analyzer.test.ts`: 28 tests — overlap detection, keep recs, no-savings honesty, edge cases
-- `catalog.test.ts`: 29 tests — new tools, pricingModel, vendor, alternatives validation
-
-#### 10. CI Enhancement
-- Added `concurrency` with `cancel-in-progress` for faster feedback
-- Added `timeout-minutes: 10` safety net
-- Verbose test reporter for CI output
-
----
-
-## Decisions & Tradeoffs
-
-### Why conservative consolidation savings?
-We use `Math.min(tool1Spend, tool2Spend)` as the consolidation savings estimate. This is intentionally conservative — if the user is spending $200/mo on Cursor and $50/mo on Copilot, we report $50 savings (not $200). We'd rather undercount than overcount.
-
-### Why "keep" recommendations?
-Trust. Showing the user "we evaluated this tool and found no optimization" is more credible than silently omitting it. It demonstrates completeness of analysis.
-
-### Why factor-based confidence scoring?
-Hardcoded confidence levels per recommendation type are fragile. The factor-based system (`ConfidenceFactors`) makes confidence derivable from objective criteria: pricing freshness, vendor match, usage assumptions. This is both more accurate and more transparent.
-
-### Why separate calculations.ts?
-The calculation functions are pure and independently testable. Keeping them separate from the analyzer (which has orchestration logic) makes both easier to test, extend, and reason about.
-
-### Why the `catalogVersion` field on AuditResult?
-When pricing data changes, users who shared audit URLs need to know their audit was based on an older catalog. This enables stale-audit warnings in future UI.
-
----
-
-## Assumptions
-
-1. **Pricing data is reasonably accurate as of May 2026** — sourced from public pages, but could be stale by the time someone uses the tool.
-2. **Team size = seat ceiling** — we assume the user's reported team size is the correct number of seats they need. This is a simplification.
-3. **Same-category = potential overlap** — not all tools in the same category are interchangeable, but it's a reasonable first signal.
-4. **API-based tools (OpenAI, Anthropic) are harder to audit** — usage-based pricing means we can't compare plans deterministically without actual token usage data.
-
----
-
-## Technical Debt
-
-1. **Zod v4 + React Hook Form resolver** — requires `as any` cast on `zodResolver()`. Known compatibility issue; should resolve when `@hookform/resolvers` ships Zod v4 adapter.
-2. **`watch()` incompatible-library warning** — React Compiler detects that RHF's `watch()` returns unmemoizable values. Suppressed with directive; not a bug.
-3. **No server-side audit processing** — engine runs client-side only. Day 3+ should add API routes for persistence.
-4. **No Supabase integration** — audit results are in-memory only. No persistence, no history.
-
----
-
-## What's Remaining (Day 3+)
-
-### Priority 1 (Core Product)
-- [ ] Supabase schema design & integration
-- [ ] Server-side API routes (`POST /api/audit`, `GET /api/audit/:id`)
-- [ ] Audit result persistence (save to DB)
-- [ ] Public share URL page (`/share/:id`)
-- [ ] Email capture after value delivery
-
-### Priority 2 (UX & Polish)
-- [ ] Framer Motion animations on landing page
-- [ ] PDF export of audit results
-- [ ] AI-generated personalized summary paragraph (non-financial)
-- [ ] Audit history page
-- [ ] Loading skeleton states
-
-### Priority 3 (Scale & Trust)
-- [ ] Automated pricing staleness monitoring
-- [ ] Rate limiting on API routes
-- [ ] OG image generation for share URLs
-- [ ] Analytics / conversion tracking
-- [ ] Error boundary components
-
-### Priority 4 (Catalog Expansion)
-- [ ] AWS Bedrock / SageMaker
-- [ ] Google Cloud Vertex AI
-- [ ] Datadog
-- [ ] Snowflake
-- [ ] Figma (with AI features)
-- [ ] Linear / Slack AI
-
----
-
-## CI Status
-
-| Check | Status |
-|-------|--------|
-| ESLint | ✅ Clean |
-| TypeScript (`tsc --noEmit`) | ✅ Clean |
-| Vitest (126 tests) | ✅ All passing |
-| Build | ⚠️ Not verified this session (Day 1 build was clean) |
-
----
-
-## Test Coverage Summary
-
-| Test File | Tests | Coverage Area |
-|-----------|-------|---------------|
-| `calculations.test.ts` | 38 | Pure math: rounding, seat calcs, downgrades, overlaps, formulas |
-| `catalog.test.ts` | 29 | Data integrity, specific pricing, lookup helpers |
-| `analyzer.test.ts` | 28 | Engine pipeline: rightsizing, downgrades, overlaps, keeps, edge cases |
-| `confidence.test.ts` | 18 | Scoring logic, factor builders, staleness detection |
-| `snapshot.test.ts` | 13 | PII sanitization, privacy validation |
-| **Total** | **126** | |
-
----
-
-*Last updated: 2026-05-07 (Day 2)*
-*Next update expected: Day 3*
+## Engineering Standards
+- **Trust First**: No AI-driven hallucinations in financial outputs.
+- **Strict Typing**: All schemas, inputs, and outputs use rigid Zod and TS definitions.
+- **Screenshot Worthy**: Every final user-facing view must look worthy of a Product Hunt launch.

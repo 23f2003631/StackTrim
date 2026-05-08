@@ -52,11 +52,18 @@ export function createPublicSnapshot(result: AuditResult): PublicAuditSnapshot {
     toolCount: result.input.tools.length,
     toolNames: extractUniqueToolNames(result),
     recommendations: result.recommendations.map(sanitizeRecommendation),
+    totalMonthlySpend: result.totalMonthlySpend,
     totalMonthlySavings: result.totalMonthlySavings,
     totalAnnualSavings: result.totalAnnualSavings,
     savingsPercentage: result.savingsPercentage,
     createdAt: result.createdAt,
     catalogVersion: result.catalogVersion,
+    engineVersion: "1.0.0", // Hardcoded for now
+    metadata: {
+      hasHighSavings: result.savingsPercentage >= 15,
+      hasOverlappingTools: result.hasOverlappingTools,
+      optimizedToolCount: result.optimizedToolCount,
+    },
   };
 }
 

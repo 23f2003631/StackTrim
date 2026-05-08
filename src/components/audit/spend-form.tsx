@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, ArrowRight, Loader2 } from "lucide-react";
+import { Plus, Trash2, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +25,8 @@ import {
 
 import { auditInputSchema, type AuditInputForm } from "@/lib/validations/audit";
 import { pricingCatalog, getToolById } from "@/lib/engine/catalog";
-import { generateAuditResult } from "@/lib/engine/analyzer";
-import type { AuditResult } from "@/lib/types/audit";
 import { AuditResults } from "@/components/audit/audit-results";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const DEFAULT_TOOL = {
   toolId: "",
@@ -37,8 +37,10 @@ const DEFAULT_TOOL = {
 };
 
 export function SpendForm() {
-  const [result, setResult] = useState<AuditResult | null>(null);
+  const router = useRouter();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   const {
     register,
@@ -65,14 +67,70 @@ export function SpendForm() {
   // eslint-disable-next-line react-hooks/incompatible-library
   const watchedTools = watch("tools");
 
-  function onSubmit(data: AuditInputForm) {
+  // LocalStorage persistence
+  useEffect(() => {
+    setIsMounted(true);
+    const saved = localStorage.getItem("stacktrim_form_state");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Only restore if valid structure exists
+        if (parsed && Array.isArray(parsed.tools)) {
+          // Reset form with saved values, keeping default structure if missing fields
+          Object.keys(parsed).forEach((key) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setValue(key as any, parsed[key]);
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to parse saved form state", e);
+      }
+    }
+  }, [setValue]);
+
+  // Save on changes
+  useEffect(() => {
+    if (isMounted) {
+      const subscription = watch((value) => {
+        localStorage.setItem("stacktrim_form_state", JSON.stringify(value));
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [watch, isMounted]);
+
+  async function onSubmit(data: AuditInputForm) {
     setIsAnalyzing(true);
-    // Small delay to show loading state (feels more intentional)
-    setTimeout(() => {
-      const auditResult = generateAuditResult(data);
-      setResult(auditResult);
+    setServerError(null);
+
+    try {
+      const response = await fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate audit");
+      }
+
+      const { slug } = await response.json();
+      
+      // Clear persistence on success
+      localStorage.removeItem("stacktrim_form_state");
+      
+      // Redirect to public result page
+      router.push(`/share/${slug}`);
+    } catch (error) {
+      console.error("Submission error:", error);
+      setServerError(error instanceof Error ? error.message : "An unexpected error occurred");
       setIsAnalyzing(false);
-    }, 600);
+    }
+  }
+
+  // Prevent hydration mismatch by not rendering form until mounted
+  if (!isMounted) {
+    return null; // Or a simple skeleton loader
   }
 
   // Get available plans for a selected tool
@@ -81,13 +139,15 @@ export function SpendForm() {
     return tool?.plans ?? [];
   }
 
-  if (result) {
-    return <AuditResults result={result} onReset={() => setResult(null)} />;
-  }
-
   return (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-8">
+      {serverError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{serverError}</AlertDescription>
+        </Alert>
+      )}
       {/* Company & Team Info */}
       <Card>
         <CardHeader className="pb-4">

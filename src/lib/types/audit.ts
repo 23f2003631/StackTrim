@@ -153,12 +153,19 @@ export interface PublicAuditSnapshot {
   /** Aggregate recommendations — no per-tool spend details */
   recommendations: PublicRecommendation[];
   /** Summary financials */
+  totalMonthlySpend: number;
   totalMonthlySavings: number;
   totalAnnualSavings: number;
   savingsPercentage: number;
   /** Metadata */
   createdAt: string;
   catalogVersion: string;
+  engineVersion: string;
+  metadata: {
+    hasHighSavings: boolean;
+    hasOverlappingTools: boolean;
+    optimizedToolCount: number;
+  };
 }
 
 /** Sanitized recommendation for public display */
