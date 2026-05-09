@@ -5,11 +5,32 @@ import { generateAuditResult } from "@/lib/engine/analyzer";
 import { createPublicSnapshot } from "@/lib/engine/snapshot";
 import { createAdminClient } from "@/lib/supabase/server";
 
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { isPayloadTooLarge, isHoneypotTriggered } from "@/lib/security/validation";
+
 export async function POST(req: Request) {
   try {
+    // 1. Abuse Protection: Payload Size
+    const contentLength = req.headers.get("content-length");
+    if (isPayloadTooLarge(contentLength)) {
+      return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+    }
+
+    // 2. Abuse Protection: Rate Limiting
+    const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const body = await req.json();
 
-    // 1. Validate Input
+    // 3. Abuse Protection: Honeypot
+    if (isHoneypotTriggered(body)) {
+      // Silently succeed for bots
+      return NextResponse.json({ slug: "bot-trap" }, { status: 201 });
+    }
+
+    // 4. Validate Input
     const parsed = auditInputSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

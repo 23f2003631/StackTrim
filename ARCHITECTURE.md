@@ -50,39 +50,45 @@ Velocity without vendor lock-in. shadcn/ui gives us owned, accessible, type-safe
 
 Geist is Vercel's font — it signals "modern SaaS" to our target audience. It's the default in Next.js 16, so zero additional cost.
 
-## Future Architecture (Day 2+)
+## Current Architecture (Day 4)
 
 ```
-┌──────────────────────────────────────────────────┐
-│                   Client (Next.js)                │
-│                                                    │
-│  Landing ──→ Audit Form ──→ Results ──→ Email     │
-│                                    │    Capture    │
-│                                    ▼               │
-│                              PDF Export            │
-│                              Share URL             │
-└───────────────────┬──────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│                   Client (Next.js)                     │
+│                                                         │
+│  Landing ──→ Audit Form ──→ Results ──→ Lead Capture    │
+│                                    │    (Consultation)  │
+│                                    ▼                    │
+│                              Public Share URL           │
+└───────────────────┬───────────────────────────────┬────┘
+                    │                               │
+                    ▼                               ▼
+┌───────────────────────────────────────┐   ┌───────────────────────────┐
+│          API Routes (Next.js)         │   │   External Providers      │
+│                                       │   │                           │
+│  POST /api/audit    ──→ Engine/DB     │   │  Gemini AI (Summaries)    │
+│  GET  /api/audit/:id/summary ──→ AI   ├───┼──→                        │
+│  POST /api/lead      ──→ DB/Email     │   │  Resend (Transactional)   │
+└───────────────────┬───────────────────┘   └───────────────────────────┘
                     │
                     ▼
-┌──────────────────────────────────────────────────┐
-│               API Routes (Next.js)                │
-│                                                    │
-│  POST /api/audit    ──→ Engine + Save to DB       │
-│  GET  /api/audit/:id ──→ Fetch result             │
-│  POST /api/lead      ──→ Capture email            │
-│  GET  /api/share/:id ──→ Public result page       │
-└───────────────────┬──────────────────────────────┘
-                    │
-                    ▼
-┌──────────────────────────────────────────────────┐
-│                  Supabase                         │
-│                                                    │
-│  Tables:                                           │
-│    audits        (id, input, result, created_at)   │
-│    leads         (id, email, audit_id, created_at) │
-│    shared_audits (id, audit_id, slug, og_image)    │
-└──────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│                  Supabase (PostgreSQL)                 │
+│                                                         │
+│  Tables:                                                │
+│    audits (id, slug, input, result, public_snapshot)    │
+│    leads  (id, email, audit_id, created_at)             │
+│    events (id, event_type, audit_id, data)              │
+│                                                         │
+│  Security: Strict RLS (Default Deny), Server-Side only  │
+└────────────────────────────────────────────────────────┘
 ```
+
+## Security & Reliability Boundaries
+
+- **No client-side secrets**: All Supabase, Gemini, and Resend keys stay on the server.
+- **Strict Rate Limiting**: In-memory IP rate limiting and honeypot validation on `/api/audit` and `/api/lead`.
+- **Async Safety**: High-latency actions (AI summary generation, transactional email dispatch) are isolated. AI uses a 4s `AbortController` timeout to prevent blocking. Lead capture records to the database *before* firing transactional emails to prevent data loss.
 
 ## Security Considerations
 

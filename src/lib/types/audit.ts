@@ -165,6 +165,7 @@ export interface PublicAuditSnapshot {
     hasHighSavings: boolean;
     hasOverlappingTools: boolean;
     optimizedToolCount: number;
+    aiSummary?: string;
   };
 }
 

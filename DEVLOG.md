@@ -65,4 +65,29 @@
 
 ---
 
+## Day 3 — Backend Persistence & SaaS Execution
+
+**Focus:** Supabase integration, Server/Client Boundaries, Premium UX
+
+### What I built
+1. **Supabase Integration**: Implemented strict Option A architecture using `SUPABASE_SERVICE_ROLE_KEY` exclusively on the server.
+2. **Server-Side Determinism**: `POST /api/audit` runs the engine on the server to prevent client-side manipulation.
+3. **Public Snapshots**: Developed `/share/[slug]` pages using `nanoid` slugs, ensuring privacy for full audit results.
+4. **Premium UX**: High-end visual upgrades including an Honest Empty State for zero-savings results.
+
+---
+
+## Day 4 — Lead Generation & Transactional Email
+
+**Focus:** GenAI Summaries, Lead Capture, Resend Transactional Emails, Abuse Protection
+
+### What I built
+1. **AI Operations Summary**: Integrated `@google/genai` inside `/api/audit/[slug]/summary` with a resilient 4s `AbortController` and deterministic fallback text.
+2. **Post-Value Lead Capture**: Developed a premium "Discuss these savings" CTA that securely saves to the `leads` table.
+3. **Transactional Emails**: Integrated `resend` to trigger beautifully formatted, minimalist HTML emails (`src/lib/email/templates/audit-report.ts`) containing the AI summary and full savings breakdown.
+4. **Graceful Degradation Boundaries**: Ensured `POST /api/lead` successfully records leads even if the email dispatch fails, returning a clean 201 response.
+5. **Abuse Protection**: Implemented lightweight IP rate limiting and honeypot structures.
+
+---
+
 *Entries will be added daily as development continues.*

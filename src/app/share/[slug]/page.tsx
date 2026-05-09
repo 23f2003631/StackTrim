@@ -49,7 +49,7 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
       {/* Audit Results */}
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-6 py-12 sm:py-16">
-          <AuditResults result={snapshot} />
+          <AuditResults result={snapshot} slug={slug} />
         </div>
       </main>
     </div>

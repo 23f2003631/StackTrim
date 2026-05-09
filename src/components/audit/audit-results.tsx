@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowLeft, TrendingDown, DollarSign, Lightbulb, Shield, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, TrendingDown, DollarSign, Lightbulb, Shield, CheckCircle2, Bot, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -10,9 +11,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type { PublicAuditSnapshot, PublicRecommendation } from "@/lib/types/audit";
+import { LeadCaptureForm } from "./lead-capture-form";
 
 interface AuditResultsProps {
   result: PublicAuditSnapshot;
+  slug?: string;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -60,6 +63,7 @@ function formatCurrency(amount: number): string {
 
 function RecommendationCard({ rec }: { rec: PublicRecommendation }) {
   const isKeep = rec.type === "keep";
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <Card className={`overflow-hidden transition-all duration-200 hover:shadow-md ${isKeep ? "opacity-75" : ""}`}>
@@ -81,9 +85,26 @@ function RecommendationCard({ rec }: { rec: PublicRecommendation }) {
                 {CONFIDENCE_LABELS[rec.confidence]}
               </Badge>
             </div>
-            <p className="text-sm leading-relaxed text-muted-foreground max-w-2xl">
+            
+            <p className="text-sm leading-relaxed text-muted-foreground max-w-2xl line-clamp-2">
               {rec.reasoning}
             </p>
+
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs font-medium text-primary flex items-center gap-1 hover:underline"
+            >
+              {isExpanded ? "Hide rationale" : "Why this recommendation?"}
+              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+
+            {isExpanded && (
+              <div className="mt-3 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md border border-border/50 animate-in fade-in slide-in-from-top-1">
+                <strong>Pricing Verification:</strong> This is a deterministic recommendation based on public pricing. 
+                <br className="mb-2" />
+                {rec.reasoning}
+              </div>
+            )}
           </div>
           {rec.monthlySavings > 0 && (
             <div className="sm:text-right shrink-0 bg-emerald-50/50 rounded-lg p-3 border border-emerald-100">
@@ -100,7 +121,35 @@ function RecommendationCard({ rec }: { rec: PublicRecommendation }) {
   );
 }
 
-export function AuditResults({ result }: AuditResultsProps) {
+export function AuditResults({ result, slug }: AuditResultsProps) {
+  const [aiSummary, setAiSummary] = useState<string | null>(result.metadata?.aiSummary || null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(!result.metadata?.aiSummary);
+
+  const referenceId = slug || result.id;
+
+  useEffect(() => {
+    if (result.metadata?.aiSummary) return;
+    if (!referenceId) return;
+    
+    let isMounted = true;
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch(`/api/audit/${referenceId}/summary`);
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          setAiSummary(data.summary);
+        }
+      } catch (err) {
+        console.error("Failed to load AI summary:", err);
+      } finally {
+        if (isMounted) setIsLoadingSummary(false);
+      }
+    };
+    fetchSummary();
+    
+    return () => { isMounted = false; };
+  }, [referenceId, result.metadata?.aiSummary]);
+
   const actionableRecs = result.recommendations.filter(
     (r) => r.monthlySavings > 0
   );
@@ -123,7 +172,7 @@ export function AuditResults({ result }: AuditResultsProps) {
           New Audit
         </Link>
         <span className="text-xs text-muted-foreground font-mono bg-secondary px-2 py-1 rounded-md">
-          ID: {result.id.slice(0, 8)}
+          ID: {referenceId.slice(0, 8)}
         </span>
       </div>
 
@@ -175,6 +224,26 @@ export function AuditResults({ result }: AuditResultsProps) {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* AI Consultant Summary */}
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="bg-primary/10 p-1.5 rounded-md">
+            <Bot className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="font-semibold text-primary tracking-tight">Consultant's Note</h3>
+        </div>
+        {isLoadingSummary ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Preparing operations summary...
+          </div>
+        ) : (
+          <p className="text-sm leading-relaxed text-foreground/90">
+            {aiSummary}
+          </p>
+        )}
       </div>
 
       {/* Overlap Alert */}
@@ -266,6 +335,16 @@ export function AuditResults({ result }: AuditResultsProps) {
         </Card>
       )}
 
+      <Separator />
+
+      {/* Lead Capture UX */}
+      <div className="max-w-xl mx-auto pt-4">
+        <LeadCaptureForm 
+          auditSlug={referenceId} 
+          isHighSavings={result.totalMonthlySavings > 500}
+        />
+      </div>
+
       {/* Footer disclaimer */}
       <div className="rounded-xl border border-border/60 bg-secondary/20 p-5 mt-12">
         <p className="text-xs text-muted-foreground leading-relaxed">
@@ -273,8 +352,9 @@ export function AuditResults({ result }: AuditResultsProps) {
           publicly available pricing data (catalog v{result.catalogVersion}, engine v{result.engineVersion}). Savings
           estimates are conservative and based on catalog pricing — actual
           savings may vary based on negotiated rates, usage patterns, and
-          contract terms. No AI was used to generate these financial
-          calculations.
+          contract terms. 
+          <br className="mb-1 mt-1" />
+          <strong>AI Boundaries Disclosure:</strong> Savings calculations are completely deterministic. AI is ONLY used to generate the summary note at the top of this report.
         </p>
       </div>
     </div>

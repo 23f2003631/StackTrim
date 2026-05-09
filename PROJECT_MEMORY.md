@@ -40,6 +40,25 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
 - **Asynchronous Route Params**: In Next.js 15+, `params` passed to pages and layouts is a Promise. Accessing properties synchronously (e.g., `params.slug`) evaluates to `undefined`, which caused the Supabase query `.eq("slug", params.slug)` to silently fail and trigger the 404 `notFound()` fallback. The page was updated to explicitly `await params` (`const { slug } = await params;`).
 - **Supabase Environment Variables**: Ensure `NEXT_PUBLIC_SUPABASE_URL` is a fully qualified URL (e.g., `https://[ref].supabase.co`). Missing the protocol causes silent URL parsing failures.
 
+### Day 4: Lead Generation & Trust UX
+- **AI Summary Integration**:
+  - Implemented `@google/genai` to generate personalized summaries.
+  - Architecture: Non-blocking async fetch from `/api/audit/[slug]/summary` via the `AuditResults` client component.
+  - Guardrails: 4-second `AbortController` timeout and resilient deterministic fallbacks to guarantee the user experience never breaks during API failures.
+- **Conversion-Optimized UX**:
+  - High-savings ($>500/mo) result pages now feature a premium CTA ("Discuss these savings") mapped to a lead capture form.
+  - Added an "Honest Empty State" and "Already Optimized" states for zero-savings audits, reinforcing transparency over aggression.
+  - Implemented an expandable "Why this recommendation?" section outlining calculation mechanisms.
+  - Added clear UI disclosures affirming that financial metrics are fully deterministic, while AI is strictly constrained to narrative summarization.
+- **Transactional Architecture (Resend)**:
+  - Upgraded `src/lib/email/resend.ts` to use a semantic, minimalist HTML template (`src/lib/email/templates/audit-report.ts`) rendering the full audit summary, savings, and trust bounds.
+  - **Environment-Based Sender**: Implemented `RESEND_FROM_EMAIL` configuration. Defaulted to `StackTrim <onboarding@resend.dev>` for development/testing as the primary domain (`stacktrim.com`) is not yet verified in Resend.
+  - Implemented safe async email boundaries: `POST /api/lead` successfully records leads *before* triggering the email. Email failures are caught and logged as `[Email Delivery Failed]`, allowing the API to return a 201 without breaking the user experience.
+  - Avoided over-engineered React-email builders to keep dependencies low and maintenance fast.
+- **Abuse Protection**:
+  - Implemented lightweight, in-memory IP rate limiting (`src/lib/security/rate-limit.ts`).
+  - Added strict payload size constraints and hidden honeypot validation (`website_url` bot trap).
+
 ## File Structure Map
 - `src/app/api/audit/route.ts` - Central processing and DB persistence handler.
 - `src/app/share/[slug]/page.tsx` - Public, sanitized result page.
@@ -49,8 +68,7 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
 - `supabase/migrations/` - SQL migration source of truth.
 - `SUPABASE_SETUP.md` - Mandatory setup instructions and architectural rationale.
 
-## Future Context (Day 4+)
-- **Lead Capture**: We have a `leads` table ready. Future implementation should gate high-value details behind an email capture or offer a "book a consultation" flow.
+## Future Context (Day 5+)
 - **Analytics**: The `events` table is primed for funnel tracking.
 - **Benchmark Mode**: Result metadata includes `hasHighSavings` and `optimizedToolCount` to enable future industry benchmarking dashboards.
 
