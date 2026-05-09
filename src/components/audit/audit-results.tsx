@@ -1,13 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, TrendingDown, DollarSign, Lightbulb, Shield, CheckCircle2, Bot, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft,
+  TrendingDown,
+  DollarSign,
+  Lightbulb,
+  Shield,
+  CheckCircle2,
+  Bot,
+  ChevronDown,
+  ChevronUp,
+  Link2,
+  FileText,
+  Check,
+} from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type { PublicAuditSnapshot, PublicRecommendation } from "@/lib/types/audit";
@@ -61,94 +72,182 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function RecommendationCard({ rec }: { rec: PublicRecommendation }) {
+// Subtle entrance animation presets (Ramp/Mercury feel)
+const fadeUp = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4, ease: "easeOut" as const },
+};
+
+const stagger = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
+
+function RecommendationCard({ rec, index }: { rec: PublicRecommendation; index: number }) {
   const isKeep = rec.type === "keep";
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <Card className={`overflow-hidden transition-all duration-200 hover:shadow-md ${isKeep ? "opacity-75" : ""}`}>
-      <CardContent className="p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              {isKeep && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-              <h3 className="text-base font-semibold">{rec.toolName}</h3>
-              <span
-                className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[rec.type] || ""}`}
-              >
-                {TYPE_LABELS[rec.type] || rec.type}
-              </span>
-              <Badge
-                variant="outline"
-                className={`text-xs ${CONFIDENCE_COLORS[rec.confidence] || ""}`}
-              >
-                {CONFIDENCE_LABELS[rec.confidence]}
-              </Badge>
-            </div>
-            
-            <p className="text-sm leading-relaxed text-muted-foreground max-w-2xl line-clamp-2">
-              {rec.reasoning}
-            </p>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.05, ease: "easeOut" }}
+    >
+      <Card
+        className={`overflow-hidden transition-all duration-200 hover:shadow-md ${isKeep ? "opacity-75" : ""}`}
+      >
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                {isKeep && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                <h3 className="text-base font-semibold">{rec.toolName}</h3>
+                <span
+                  className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[rec.type] || ""}`}
+                >
+                  {TYPE_LABELS[rec.type] || rec.type}
+                </span>
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${CONFIDENCE_COLORS[rec.confidence] || ""}`}
+                >
+                  {CONFIDENCE_LABELS[rec.confidence]}
+                </Badge>
+              </div>
 
-            <button 
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-xs font-medium text-primary flex items-center gap-1 hover:underline"
-            >
-              {isExpanded ? "Hide rationale" : "Why this recommendation?"}
-              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </button>
-
-            {isExpanded && (
-              <div className="mt-3 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md border border-border/50 animate-in fade-in slide-in-from-top-1">
-                <strong>Pricing Verification:</strong> This is a deterministic recommendation based on public pricing. 
-                <br className="mb-2" />
+              <p className="text-sm leading-relaxed text-muted-foreground max-w-2xl line-clamp-2">
                 {rec.reasoning}
+              </p>
+
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-xs font-medium text-primary flex items-center gap-1 hover:underline"
+                aria-expanded={isExpanded}
+                aria-label={`${isExpanded ? "Hide" : "Show"} rationale for ${rec.toolName}`}
+              >
+                {isExpanded ? "Hide rationale" : "Why this recommendation?"}
+                {isExpanded ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+              </button>
+
+              {isExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md border border-border/50"
+                >
+                  <strong>Pricing Verification:</strong> This is a deterministic
+                  recommendation based on public pricing.
+                  <br className="mb-2" />
+                  {rec.reasoning}
+                </motion.div>
+              )}
+            </div>
+            {rec.monthlySavings > 0 && (
+              <div className="sm:text-right shrink-0 bg-emerald-50/50 rounded-lg p-3 border border-emerald-100">
+                <p className="text-xs text-emerald-700 font-medium mb-0.5">
+                  Potential Savings
+                </p>
+                <p className="text-2xl font-bold text-emerald-700 tracking-tight">
+                  {formatCurrency(rec.monthlySavings)}
+                  <span className="text-sm font-medium text-emerald-600/70 ml-1">
+                    /mo
+                  </span>
+                </p>
               </div>
             )}
           </div>
-          {rec.monthlySavings > 0 && (
-            <div className="sm:text-right shrink-0 bg-emerald-50/50 rounded-lg p-3 border border-emerald-100">
-              <p className="text-xs text-emerald-700 font-medium mb-0.5">Potential Savings</p>
-              <p className="text-2xl font-bold text-emerald-700 tracking-tight">
-                {formatCurrency(rec.monthlySavings)}
-                <span className="text-sm font-medium text-emerald-600/70 ml-1">/mo</span>
-              </p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+// Skeleton for AI summary loading
+function SummarySkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse" role="status" aria-label="Loading summary">
+      <div className="h-4 bg-primary/10 rounded w-full" />
+      <div className="h-4 bg-primary/10 rounded w-11/12" />
+      <div className="h-4 bg-primary/10 rounded w-9/12" />
+      <span className="sr-only">Loading AI summary...</span>
+    </div>
   );
 }
 
 export function AuditResults({ result, slug }: AuditResultsProps) {
-  const [aiSummary, setAiSummary] = useState<string | null>(result.metadata?.aiSummary || null);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(!result.metadata?.aiSummary);
+  const [aiSummary, setAiSummary] = useState<string | null>(
+    result.metadata?.aiSummary || null
+  );
+  const [isLoadingSummary, setIsLoadingSummary] = useState(
+    !result.metadata?.aiSummary
+  );
+  const [isCopied, setIsCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const referenceId = slug || result.id;
 
+  // Progressive AI summary loading — never blocks deterministic content
   useEffect(() => {
     if (result.metadata?.aiSummary) return;
     if (!referenceId) return;
-    
+
     let isMounted = true;
     const fetchSummary = async () => {
       try {
-        const res = await fetch(`/api/audit/${referenceId}/summary`);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        
+        const res = await fetch(`/api/audit/${referenceId}/summary`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        
         if (res.ok && isMounted) {
           const data = await res.json();
           setAiSummary(data.summary);
         }
       } catch (err) {
-        console.error("Failed to load AI summary:", err);
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error("Failed to load AI summary:", err);
+        }
       } finally {
         if (isMounted) setIsLoadingSummary(false);
       }
     };
     fetchSummary();
-    
-    return () => { isMounted = false; };
+
+    return () => {
+      isMounted = false;
+    };
   }, [referenceId, result.metadata?.aiSummary]);
+
+  // Copy share URL to clipboard
+  const handleCopyLink = async () => {
+    const shareUrl = `${window.location.origin}/share/${referenceId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setIsCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement("input");
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      setIsCopied(true);
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+      copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
 
   const actionableRecs = result.recommendations.filter(
     (r) => r.monthlySavings > 0
@@ -156,28 +255,60 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
   const creditRecs = result.recommendations.filter(
     (r) => r.type === "credit"
   );
-  const keepRecs = result.recommendations.filter(
-    (r) => r.type === "keep"
-  );
+  const keepRecs = result.recommendations.filter((r) => r.type === "keep");
 
   return (
-    <div className="space-y-10">
+    <motion.div className="space-y-10" {...stagger} initial="initial" animate="animate">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link 
+      <motion.div {...fadeUp} className="flex items-center justify-between flex-wrap gap-3">
+        <Link
           href="/audit"
-          className={buttonVariants({ variant: "ghost", size: "sm", className: "gap-1.5 text-muted-foreground -ml-3" })}
+          className={buttonVariants({
+            variant: "ghost",
+            size: "sm",
+            className: "gap-1.5 text-muted-foreground -ml-3",
+          })}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           New Audit
         </Link>
-        <span className="text-xs text-muted-foreground font-mono bg-secondary px-2 py-1 rounded-md">
-          ID: {referenceId.slice(0, 8)}
-        </span>
-      </div>
+        <div className="flex items-center gap-2">
+          {/* Copy Share Link */}
+          <button
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors bg-secondary/60 hover:bg-secondary px-3 py-1.5 rounded-md border border-border/60"
+            aria-label="Copy share link"
+          >
+            {isCopied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-600">Copied</span>
+              </>
+            ) : (
+              <>
+                <Link2 className="h-3.5 w-3.5" />
+                Share
+              </>
+            )}
+          </button>
+          {/* PDF Export */}
+          <Link
+            href={`/share/${referenceId}/print`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors bg-secondary/60 hover:bg-secondary px-3 py-1.5 rounded-md border border-border/60"
+            aria-label="Download PDF report"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            PDF
+          </Link>
+          {/* Audit ID */}
+          <span className="text-xs text-muted-foreground font-mono bg-secondary px-2 py-1 rounded-md">
+            ID: {referenceId.slice(0, 8)}
+          </span>
+        </div>
+      </motion.div>
 
-      {/* Hero Summary Cards (Screenshot Priority) */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* Hero Summary Cards */}
+      <motion.div {...fadeUp} className="grid gap-4 sm:grid-cols-3">
         <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/50 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <TrendingDown className="h-24 w-24 text-emerald-900" />
@@ -224,48 +355,59 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
             )}
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
-      {/* AI Consultant Summary */}
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm">
+      {/* AI Consultant Summary — progressively loaded */}
+      <motion.div
+        {...fadeUp}
+        className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm"
+      >
         <div className="flex items-center gap-2 mb-3">
           <div className="bg-primary/10 p-1.5 rounded-md">
             <Bot className="h-4 w-4 text-primary" />
           </div>
-          <h3 className="font-semibold text-primary tracking-tight">Consultant&apos;s Note</h3>
+          <h3 className="font-semibold text-primary tracking-tight">
+            Consultant&apos;s Note
+          </h3>
         </div>
         {isLoadingSummary ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Preparing operations summary...
-          </div>
+          <SummarySkeleton />
         ) : (
-          <p className="text-sm leading-relaxed text-foreground/90">
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="text-sm leading-relaxed text-foreground/90"
+          >
             {aiSummary}
-          </p>
+          </motion.p>
         )}
-      </div>
+      </motion.div>
 
       {/* Overlap Alert */}
       {result.metadata.hasOverlappingTools && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-5 flex items-start gap-3 shadow-sm">
+        <motion.div
+          {...fadeUp}
+          className="rounded-xl border border-amber-200 bg-amber-50/80 p-5 flex items-start gap-3 shadow-sm"
+        >
           <Shield className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-amber-900">
               Overlapping tools detected
             </p>
             <p className="text-sm text-amber-800/90 mt-1 leading-relaxed">
-              You have multiple tools in the same category. Consolidation may reduce costs without losing capability. See recommendations below.
+              You have multiple tools in the same category. Consolidation may
+              reduce costs without losing capability. See recommendations below.
             </p>
           </div>
-        </div>
+        </motion.div>
       )}
 
       <Separator />
 
       {/* Actionable Recommendations */}
       {actionableRecs.length > 0 && (
-        <div className="space-y-4">
+        <motion.div {...fadeUp} className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
               Savings Opportunities ({actionableRecs.length})
@@ -276,34 +418,35 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
           </div>
           <div className="space-y-3">
             {actionableRecs.map((rec, i) => (
-              <RecommendationCard key={i} rec={rec} />
+              <RecommendationCard key={i} rec={rec} index={i} />
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Credit Opportunities */}
       {creditRecs.length > 0 && (
-        <div className="space-y-4">
+        <motion.div {...fadeUp} className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
               Credit Programs to Explore
             </h2>
             <p className="text-sm text-muted-foreground">
-              These vendors offer startup or volume credits you may be eligible for.
+              These vendors offer startup or volume credits you may be eligible
+              for.
             </p>
           </div>
           <div className="space-y-3">
             {creditRecs.map((rec, i) => (
-              <RecommendationCard key={i} rec={rec} />
+              <RecommendationCard key={i} rec={rec} index={i} />
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Already Optimized Tools */}
       {keepRecs.length > 0 && (
-        <div className="space-y-4">
+        <motion.div {...fadeUp} className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">
               Already Optimized ({keepRecs.length})
@@ -314,13 +457,13 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
           </div>
           <div className="space-y-3">
             {keepRecs.map((rec, i) => (
-              <RecommendationCard key={i} rec={rec} />
+              <RecommendationCard key={i} rec={rec} index={i} />
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* Honest Empty State - No recommendations at all */}
+      {/* Honest Empty State */}
       {result.recommendations.length === 0 && (
         <Card className="border-emerald-200 bg-emerald-50/30">
           <CardContent className="py-16 text-center">
@@ -329,7 +472,9 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
               Your stack is fully optimized
             </h3>
             <p className="text-emerald-800/80 max-w-md mx-auto leading-relaxed">
-              We couldn&apos;t find any obvious savings opportunities. Your seat counts and plan tiers align perfectly with current market benchmarks.
+              We couldn&apos;t find any obvious savings opportunities. Your seat
+              counts and plan tiers align perfectly with current market
+              benchmarks.
             </p>
           </CardContent>
         </Card>
@@ -338,25 +483,30 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
       <Separator />
 
       {/* Lead Capture UX */}
-      <div className="max-w-xl mx-auto pt-4">
-        <LeadCaptureForm 
-          auditSlug={referenceId} 
+      <motion.div {...fadeUp} className="max-w-xl mx-auto pt-4">
+        <LeadCaptureForm
+          auditSlug={referenceId}
           isHighSavings={result.totalMonthlySavings > 500}
         />
-      </div>
+      </motion.div>
 
       {/* Footer disclaimer */}
-      <div className="rounded-xl border border-border/60 bg-secondary/20 p-5 mt-12">
+      <motion.div
+        {...fadeUp}
+        className="rounded-xl border border-border/60 bg-secondary/20 p-5 mt-12"
+      >
         <p className="text-xs text-muted-foreground leading-relaxed">
           <strong>Methodology:</strong> All recommendations are based on
-          publicly available pricing data (catalog v{result.catalogVersion}, engine v{result.engineVersion}). Savings
-          estimates are conservative and based on catalog pricing — actual
-          savings may vary based on negotiated rates, usage patterns, and
-          contract terms. 
+          publicly available pricing data (catalog v{result.catalogVersion},
+          engine v{result.engineVersion}). Savings estimates are conservative
+          and based on catalog pricing — actual savings may vary based on
+          negotiated rates, usage patterns, and contract terms.
           <br className="mb-1 mt-1" />
-          <strong>AI Boundaries Disclosure:</strong> Savings calculations are completely deterministic. AI is ONLY used to generate the summary note at the top of this report.
+          <strong>AI Boundaries Disclosure:</strong> Savings calculations are
+          completely deterministic. AI is ONLY used to generate the summary
+          note at the top of this report.
         </p>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

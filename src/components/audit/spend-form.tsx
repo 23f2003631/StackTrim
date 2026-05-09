@@ -26,6 +26,7 @@ import {
 import { auditInputSchema, type AuditInputForm } from "@/lib/validations/audit";
 import { pricingCatalog, getToolById } from "@/lib/engine/catalog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AuditLoading } from "./audit-loading";
 
 const DEFAULT_TOOL = {
   toolId: "",
@@ -143,7 +144,12 @@ export function SpendForm() {
 
   // Prevent hydration mismatch by not rendering form until mounted
   if (!isMounted) {
-    return null; // Or a simple skeleton loader
+    return null;
+  }
+
+  // Show premium loading state during audit submission
+  if (isAnalyzing) {
+    return <AuditLoading />;
   }
 
   // Get available plans for a selected tool

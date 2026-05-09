@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Mail, CheckCircle2 } from "lucide-react";
@@ -51,19 +52,29 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
 
   if (isSuccess) {
     return (
-      <div className="rounded-xl border border-border/60 bg-muted/30 p-6 text-center animate-in fade-in slide-in-from-bottom-2">
-        <CheckCircle2 className="mx-auto h-8 w-8 text-primary mb-3" />
-        <h3 className="font-semibold text-lg">Report sent!</h3>
-        <p className="text-sm text-muted-foreground mt-1">
+      <motion.div
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="rounded-xl border border-emerald-200/60 bg-emerald-50/30 p-6 text-center"
+      >
+        <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-600 mb-3" />
+        <h3 className="font-semibold text-lg text-foreground">Report sent</h3>
+        <p className="text-sm text-muted-foreground mt-1.5 max-w-sm mx-auto">
           We&apos;ve emailed you a permanent link to this audit.
-          {isHighSavings && " Our team will be in touch shortly."}
+          {isHighSavings && " Our team will review your results and follow up shortly."}
         </p>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background shadow-sm p-6 sm:p-8">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.1, ease: "easeOut" }}
+      className="rounded-xl border border-border/60 bg-background shadow-sm p-6 sm:p-8"
+    >
       <div className="mb-6">
         <h3 className="text-xl font-semibold tracking-tight flex items-center gap-2">
           <Mail className="h-5 w-5 text-primary" />
@@ -83,34 +94,43 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">Work Email</label>
-          <Input 
-            id="email" 
-            name="email" 
-            type="email" 
-            required 
-            placeholder="founder@startup.com" 
+          <label htmlFor="lead-email" className="text-sm font-medium">
+            Work Email
+          </label>
+          <Input
+            id="lead-email"
+            name="email"
+            type="email"
+            required
+            placeholder="founder@startup.com"
             disabled={isSubmitting}
+            autoComplete="email"
           />
         </div>
 
         {isHighSavings && (
           <div className="flex items-start gap-3 py-2">
-            <input 
-              type="checkbox" 
-              id="consultationIntent" 
-              name="consultationIntent" 
+            <input
+              type="checkbox"
+              id="consultationIntent"
+              name="consultationIntent"
               defaultChecked
               className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
-            <label htmlFor="consultationIntent" className="text-sm text-muted-foreground">
-              I&apos;m interested in a free 15-minute consultation with a Credex optimization expert to help implement these savings.
+            <label
+              htmlFor="consultationIntent"
+              className="text-sm text-muted-foreground"
+            >
+              I&apos;m interested in a free 15-minute consultation with a Credex
+              optimization expert to help implement these savings.
             </label>
           </div>
         )}
 
         {error && (
-          <p className="text-sm text-destructive font-medium">{error}</p>
+          <p className="text-sm text-destructive font-medium" role="alert">
+            {error}
+          </p>
         )}
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -119,14 +139,16 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Sending...
             </>
+          ) : isHighSavings ? (
+            "Send Report & Request Consultation"
           ) : (
-            isHighSavings ? "Send Report & Request Consultation" : "Email me this report"
+            "Email me this report"
           )}
         </Button>
         <p className="text-xs text-muted-foreground text-center mt-4">
           No spam. No lists. Just your deterministic audit results.
         </p>
       </form>
-    </div>
+    </motion.div>
   );
 }
