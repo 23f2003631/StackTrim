@@ -62,26 +62,25 @@ ${JSON.stringify({
 }, null, 2)}
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
+    const result = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
-        temperature: 0.2, // Low temperature for deterministic/conservative output
+        temperature: 0.2,
       }
-    }, {
-      signal: abortController.signal
     });
 
     clearTimeout(timeoutId);
 
-    if (response.text) {
-      return response.text.trim();
+    if (result.text) {
+      return result.text.trim();
     }
 
     throw new Error("Empty response from Gemini");
-  } catch (error: any) {
+  } catch (error) {
     clearTimeout(timeoutId);
-    console.error("AI Summary Generation Failed:", error.message || error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("AI Summary Generation Failed:", errorMessage);
     return generateFallbackSummary(snapshot);
   }
 }

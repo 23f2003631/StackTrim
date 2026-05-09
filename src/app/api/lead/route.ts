@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/server";
 import { sendAuditReportEmail } from "@/lib/email/resend";
+import { PublicAuditSnapshot } from "@/lib/types/audit";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { isPayloadTooLarge, isHoneypotTriggered } from "@/lib/security/validation";
 
@@ -48,8 +49,7 @@ export async function POST(req: Request) {
     const supabase = createAdminClient();
 
     // 5. Look up the audit ID, snapshot, and metadata from the slug
-    const { data: audit, error: auditError } = await supabase
-      .from("audits")
+    const { data: audit, error: auditError } = await (supabase.from("audits") as any)
       .select("id, public_snapshot, metadata")
       .eq("slug", leadData.auditSlug)
       .single();
@@ -62,17 +62,18 @@ export async function POST(req: Request) {
     }
 
     // 6. Insert lead into Supabase
-    const { error: insertError } = await supabase.from("leads").insert({
+    const { error: dbError } = await (supabase.from("leads") as any).insert({
       email: leadData.email,
       company_name: leadData.companyName,
-      role: leadData.role,
       consultation_intent: leadData.consultationIntent,
       audit_id: audit.id,
-      metadata: { source: "audit_results_cta" }
+      metadata: {
+        auditSlug: leadData.auditSlug,
+      },
     });
 
-    if (insertError) {
-      console.error("Failed to insert lead:", insertError);
+    if (dbError) {
+      console.error("Failed to insert lead:", dbError);
       return NextResponse.json(
         { error: "Failed to process lead" },
         { status: 500 }
@@ -83,8 +84,8 @@ export async function POST(req: Request) {
     const emailResult = await sendAuditReportEmail(
       leadData.email, 
       leadData.auditSlug, 
-      audit.public_snapshot as any,
-      (audit.metadata as any)?.aiSummary || null,
+      audit.public_snapshot as unknown as PublicAuditSnapshot,
+      (audit.metadata as Record<string, unknown>)?.aiSummary as string || null,
       leadData.companyName
     );
 

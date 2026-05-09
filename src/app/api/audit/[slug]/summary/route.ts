@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { generateAuditSummary } from "@/lib/ai/summary";
 import { PublicAuditSnapshot } from "@/lib/types/audit";
+import { Json } from "@/lib/types/database";
 
 export async function GET(
   request: Request,
@@ -12,8 +13,7 @@ export async function GET(
     const supabase = createAdminClient();
 
     // 1. Fetch the audit
-    const { data, error } = await supabase
-      .from("audits")
+    const { data, error } = await (supabase.from("audits") as any)
       .select("public_snapshot, metadata")
       .eq("slug", slug)
       .single();
@@ -22,8 +22,8 @@ export async function GET(
       return NextResponse.json({ error: "Audit not found" }, { status: 404 });
     }
 
-    const metadata = data.metadata as any;
-    const snapshot = (data as any).public_snapshot as unknown as PublicAuditSnapshot;
+    const metadata = data.metadata as Record<string, unknown>;
+    const snapshot = data.public_snapshot as unknown as PublicAuditSnapshot;
 
     // 2. Check if summary already exists
     if (metadata?.aiSummary) {
@@ -35,8 +35,7 @@ export async function GET(
 
     // 4. Save the summary back to the database to prevent regenerating
     const updatedMetadata = { ...metadata, aiSummary: summary };
-    await supabase
-      .from("audits")
+    await (supabase.from("audits") as any)
       .update({ metadata: updatedMetadata })
       .eq("slug", slug);
 

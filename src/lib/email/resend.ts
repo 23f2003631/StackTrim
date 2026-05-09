@@ -4,13 +4,20 @@ import { renderAuditEmailHtml } from "./templates/audit-report";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_mock_key");
 
+interface EmailResult {
+  success: boolean;
+  id?: string;
+  mocked?: boolean;
+  error?: string;
+}
+
 export async function sendAuditReportEmail(
   email: string, 
   slug: string, 
   snapshot: PublicAuditSnapshot,
   aiSummary: string | null,
   companyName?: string
-) {
+): Promise<EmailResult> {
   const auditUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/share/${slug}`;
   const companyGreeting = companyName ? `for ${companyName}` : "";
   const subject = `Your AI Spend Audit ${companyGreeting}`.trim();
@@ -56,10 +63,11 @@ The StackTrim Team
 
     console.log(`[Email Delivery Success] Audit report sent to ${email} (ID: ${data?.id})`);
     return { success: true, id: data?.id };
-  } catch (error: any) {
+  } catch (error) {
     // Catch-all for network issues, timeouts, or unexpected crashes
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("[Email Delivery Fatal] Unexpected error dispatching email:", error);
     // Return false instead of throwing to protect the upstream lead capture route
-    return { success: false, error: error.message || "Unknown error" };
+    return { success: false, error: errorMessage };
   }
 }

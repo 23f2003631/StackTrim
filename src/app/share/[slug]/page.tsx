@@ -14,8 +14,7 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const supabase = createAdminClient();
 
-  const { data, error, status } = await supabase
-    .from("audits")
+  const { data, error, status } = await (supabase.from("audits") as any)
     .select("public_snapshot")
     .eq("slug", slug)
     .single();
@@ -25,7 +24,7 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
     notFound();
   }
 
-  const snapshot = (data as any).public_snapshot as unknown as PublicAuditSnapshot;
+  const snapshot = data.public_snapshot as unknown as PublicAuditSnapshot;
 
   return (
     <div className="flex min-h-screen flex-col">

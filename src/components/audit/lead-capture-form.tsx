@@ -42,7 +42,7 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
       }
 
       setIsSuccess(true);
-    } catch (err) {
+    } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -55,7 +55,7 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
         <CheckCircle2 className="mx-auto h-8 w-8 text-primary mb-3" />
         <h3 className="font-semibold text-lg">Report sent!</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          We've emailed you a permanent link to this audit.
+          We&apos;ve emailed you a permanent link to this audit.
           {isHighSavings && " Our team will be in touch shortly."}
         </p>
       </div>
@@ -104,7 +104,7 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
               className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
             <label htmlFor="consultationIntent" className="text-sm text-muted-foreground">
-              I'm interested in a free 15-minute consultation with a Credex optimization expert to help implement these savings.
+              I&apos;m interested in a free 15-minute consultation with a Credex optimization expert to help implement these savings.
             </label>
           </div>
         )}

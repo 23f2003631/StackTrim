@@ -14,7 +14,7 @@ export function isPayloadTooLarge(contentLength: string | null): boolean {
  * Checks if a honeypot field has been filled out.
  * Bots often blindly fill all form fields.
  */
-export function isHoneypotTriggered(body: any): boolean {
+export function isHoneypotTriggered(body: Record<string, unknown>): boolean {
   // We use a disguised honeypot field name like 'phone_number_optional' or 'website_url'
   // If it's filled out, it's likely a bot.
   return !!body.website_url;

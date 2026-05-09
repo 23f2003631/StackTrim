@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useState, useEffect, useRef } from "react";
+import { useForm, useFieldArray, useWatch, SubmitHandler } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2, ArrowRight, Loader2, AlertCircle } from "lucide-react";
@@ -25,7 +25,6 @@ import {
 
 import { auditInputSchema, type AuditInputForm } from "@/lib/validations/audit";
 import { pricingCatalog, getToolById } from "@/lib/engine/catalog";
-import { AuditResults } from "@/components/audit/audit-results";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const DEFAULT_TOOL = {
@@ -64,12 +63,21 @@ export function SpendForm() {
     name: "tools",
   });
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const watchedTools = watch("tools");
+  const watchedTools = useWatch({
+    control,
+    name: "tools",
+  });
 
   // LocalStorage persistence
   useEffect(() => {
-    setIsMounted(true);
+    const frame = requestAnimationFrame(() => setIsMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  // LocalStorage persistence
+  useEffect(() => {
+    if (!isMounted) return;
+    
     const saved = localStorage.getItem("stacktrim_form_state");
     if (saved) {
       try {
@@ -78,27 +86,32 @@ export function SpendForm() {
         if (parsed && Array.isArray(parsed.tools)) {
           // Reset form with saved values, keeping default structure if missing fields
           Object.keys(parsed).forEach((key) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setValue(key as any, parsed[key]);
+            const field = key as keyof AuditInputForm;
+            setValue(field, parsed[field]);
           });
         }
       } catch (e) {
         console.warn("Failed to parse saved form state", e);
       }
     }
-  }, [setValue]);
+  }, [setValue, isMounted]);
+
+  const watchRef = useRef(watch);
+  useEffect(() => {
+    watchRef.current = watch;
+  }, [watch]);
 
   // Save on changes
   useEffect(() => {
     if (isMounted) {
-      const subscription = watch((value) => {
+      const subscription = watchRef.current((value) => {
         localStorage.setItem("stacktrim_form_state", JSON.stringify(value));
       });
       return () => subscription.unsubscribe();
     }
-  }, [watch, isMounted]);
+  }, [isMounted]);
 
-  async function onSubmit(data: AuditInputForm) {
+  const onSubmit: SubmitHandler<AuditInputForm> = async (data) => {
     setIsAnalyzing(true);
     setServerError(null);
 

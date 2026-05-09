@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { checkRateLimit } from "../../lib/security/rate-limit";
 import { isPayloadTooLarge, isHoneypotTriggered } from "../../lib/security/validation";
 

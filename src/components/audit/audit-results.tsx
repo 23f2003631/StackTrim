@@ -232,7 +232,7 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
           <div className="bg-primary/10 p-1.5 rounded-md">
             <Bot className="h-4 w-4 text-primary" />
           </div>
-          <h3 className="font-semibold text-primary tracking-tight">Consultant's Note</h3>
+          <h3 className="font-semibold text-primary tracking-tight">Consultant&apos;s Note</h3>
         </div>
         {isLoadingSummary ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
