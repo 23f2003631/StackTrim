@@ -14,6 +14,7 @@ export default async function SharePage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const supabase = createAdminClient();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error, status } = await (supabase.from("audits") as any)
     .select("public_snapshot")
     .eq("slug", slug)

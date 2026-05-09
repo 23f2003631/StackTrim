@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { generateAuditSummary } from "@/lib/ai/summary";
 import { PublicAuditSnapshot } from "@/lib/types/audit";
-import { Json } from "@/lib/types/database";
 
 export async function GET(
   request: Request,
@@ -12,7 +11,7 @@ export async function GET(
     const { slug } = await params;
     const supabase = createAdminClient();
 
-    // 1. Fetch the audit
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from("audits") as any)
       .select("public_snapshot, metadata")
       .eq("slug", slug)
@@ -35,6 +34,7 @@ export async function GET(
 
     // 4. Save the summary back to the database to prevent regenerating
     const updatedMetadata = { ...metadata, aiSummary: summary };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase.from("audits") as any)
       .update({ metadata: updatedMetadata })
       .eq("slug", slug);

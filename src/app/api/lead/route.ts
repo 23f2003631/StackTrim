@@ -49,6 +49,7 @@ export async function POST(req: Request) {
     const supabase = createAdminClient();
 
     // 5. Look up the audit ID, snapshot, and metadata from the slug
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: audit, error: auditError } = await (supabase.from("audits") as any)
       .select("id, public_snapshot, metadata")
       .eq("slug", leadData.auditSlug)
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
     }
 
     // 6. Insert lead into Supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: dbError } = await (supabase.from("leads") as any).insert({
       email: leadData.email,
       company_name: leadData.companyName,

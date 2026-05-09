@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     // We use the admin client because this route handles server-side logic
     // and we want to bypass RLS to insert securely.
     const supabase = createAdminClient();
-
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: dbError } = await (supabase.from("audits") as any).insert({
       slug,
       input_data: JSON.parse(JSON.stringify(inputData)), // Convert to pure JSON objects
