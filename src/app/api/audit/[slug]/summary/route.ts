@@ -26,7 +26,10 @@ export async function GET(
 
     // 2. Check if summary already exists
     if (metadata?.aiSummary) {
-      return NextResponse.json({ summary: metadata.aiSummary });
+      return NextResponse.json(
+        { summary: metadata.aiSummary },
+        { headers: { "Cache-Control": "public, max-age=3600, s-maxage=86400" } }
+      );
     }
 
     // 3. Generate summary async
@@ -39,7 +42,10 @@ export async function GET(
       .update({ metadata: updatedMetadata })
       .eq("slug", slug);
 
-    return NextResponse.json({ summary });
+    return NextResponse.json(
+      { summary },
+      { headers: { "Cache-Control": "public, max-age=300, s-maxage=3600" } }
+    );
   } catch (error) {
     console.error("Error generating AI summary:", error);
     // Even if it fails, we want to return a deterministic fallback
