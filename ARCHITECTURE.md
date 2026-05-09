@@ -50,7 +50,7 @@ Velocity without vendor lock-in. shadcn/ui gives us owned, accessible, type-safe
 
 Geist is Vercel's font — it signals "modern SaaS" to our target audience. It's the default in Next.js 16, so zero additional cost.
 
-## Current Architecture (Day 4)
+## Current Architecture (Day 5)
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -58,8 +58,10 @@ Geist is Vercel's font — it signals "modern SaaS" to our target audience. It's
 │                                                         │
 │  Landing ──→ Audit Form ──→ Results ──→ Lead Capture    │
 │                                    │    (Consultation)  │
+│                                    ├──→ Print/PDF       │
 │                                    ▼                    │
 │                              Public Share URL           │
+│                              (+ Dynamic OG Image)       │
 └───────────────────┬───────────────────────────────┬────┘
                     │                               │
                     ▼                               ▼
@@ -69,6 +71,11 @@ Geist is Vercel's font — it signals "modern SaaS" to our target audience. It's
 │  POST /api/audit    ──→ Engine/DB     │   │  Gemini AI (Summaries)    │
 │  GET  /api/audit/:id/summary ──→ AI   ├───┼──→                        │
 │  POST /api/lead      ──→ DB/Email     │   │  Resend (Transactional)   │
+│                                       │   │                           │
+│  Static Routes:                       │   │                           │
+│  /share/:slug        ──→ Public View  │   │                           │
+│  /share/:slug/print  ──→ PDF Layout   │   │                           │
+│  /share/:slug/og     ──→ OG Image     │   │                           │
 └───────────────────┬───────────────────┘   └───────────────────────────┘
                     │
                     ▼
