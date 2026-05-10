@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { generateAuditSummary } from "@/lib/ai/summary";
 import { PublicAuditSnapshot } from "@/lib/types/audit";
+import { logger } from "@/lib/observability/logger";
 
 export async function GET(
   request: Request,
@@ -18,6 +19,7 @@ export async function GET(
       .single();
 
     if (error || !data) {
+      logger.warn("Audit not found for summary generation", { slug });
       return NextResponse.json({ error: "Audit not found" }, { status: 404 });
     }
 
@@ -33,7 +35,7 @@ export async function GET(
     }
 
     // 3. Generate summary async
-    const summary = await generateAuditSummary(snapshot);
+    const { summary, status } = await generateAuditSummary(snapshot);
 
     // 4. Save the summary back to the database to prevent regenerating
     const updatedMetadata = { ...metadata, aiSummary: summary };
@@ -42,12 +44,24 @@ export async function GET(
       .update({ metadata: updatedMetadata })
       .eq("slug", slug);
 
+    // 4.5 Track Analytics
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: auditRecord } = await (supabase.from("audits") as any).select("id").eq("slug", slug).single();
+    if (auditRecord) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("events") as any).insert({
+        event_type: status,
+        audit_id: auditRecord.id,
+      });
+      logger.metric("AI summary completed", { auditId: auditRecord.id, status });
+    }
+
     return NextResponse.json(
       { summary },
       { headers: { "Cache-Control": "public, max-age=300, s-maxage=3600" } }
     );
   } catch (error) {
-    console.error("Error generating AI summary:", error);
+    logger.error("Error generating AI summary", { error });
     // Even if it fails, we want to return a deterministic fallback
     // The generateAuditSummary already handles this, but just in case:
     return NextResponse.json(

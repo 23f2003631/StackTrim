@@ -6,14 +6,7 @@ export const alt = "StackTrim Audit Result";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatCurrency } from "@/lib/utils/format";
 
 export default async function OGImage({
   params,

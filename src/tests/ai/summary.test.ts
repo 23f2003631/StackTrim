@@ -5,13 +5,11 @@ import { PublicAuditSnapshot } from "../../lib/types/audit";
 // Mock the genai module
 vi.mock("@google/genai", () => {
   return {
-    GoogleGenAI: vi.fn().mockImplementation(() => {
-      return {
-        models: {
-          generateContent: vi.fn().mockRejectedValue(new Error("Simulated timeout or API failure")),
-        },
+    GoogleGenAI: class {
+      models = {
+        generateContent: vi.fn().mockRejectedValue(new Error("Timeout")),
       };
-    }),
+    },
   };
 });
 
@@ -51,11 +49,12 @@ describe("AI Summary Generation", () => {
   });
 
   it("should trigger deterministic fallback when Gemini fails", async () => {
-    const summary = await generateAuditSummary(mockSnapshot);
+    const { summary, status } = await generateAuditSummary(mockSnapshot);
     
     expect(summary).toContain("We analyzed your stack of 5 tools ($1000/mo)");
     expect(summary).toContain("identified 1 optimization opportunity");
     expect(summary).toContain("save $200 per month");
+    expect(status).toBe("ai_summary_timeout");
   });
 
   it("should return an honest optimized message if savings are 0", async () => {
@@ -65,9 +64,10 @@ describe("AI Summary Generation", () => {
       recommendations: []
     };
     
-    const summary = await generateAuditSummary(optimizedSnapshot);
+    const { summary, status } = await generateAuditSummary(optimizedSnapshot);
     
     expect(summary).toContain("appears highly optimized");
     expect(summary).toContain("We did not identify any immediate cost-saving opportunities");
+    expect(status).toBe("ai_summary_timeout");
   });
 });

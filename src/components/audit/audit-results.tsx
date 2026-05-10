@@ -23,6 +23,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type { PublicAuditSnapshot, PublicRecommendation } from "@/lib/types/audit";
 import { LeadCaptureForm } from "./lead-capture-form";
+import { trackEvent } from "@/lib/analytics/events";
+import { BenchmarkInsight } from "./benchmark-insight";
+import { TopOpportunities } from "./top-opportunities";
 
 interface AuditResultsProps {
   result: PublicAuditSnapshot;
@@ -63,14 +66,7 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   low: "text-slate-500",
 };
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatCurrency } from "@/lib/utils/format";
 
 // Subtle entrance animation presets (Ramp/Mercury feel)
 const fadeUp = {
@@ -233,6 +229,7 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setIsCopied(true);
+      trackEvent({ type: "share_link_copied", auditId: referenceId });
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
     } catch {
@@ -244,6 +241,7 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
       document.execCommand("copy");
       document.body.removeChild(input);
       setIsCopied(true);
+      trackEvent({ type: "share_link_copied", auditId: referenceId });
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
     }
@@ -294,6 +292,7 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
           {/* PDF Export */}
           <Link
             href={`/share/${referenceId}/print`}
+            onClick={() => trackEvent({ type: "pdf_exported", auditId: referenceId })}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors bg-secondary/60 hover:bg-secondary px-3 py-1.5 rounded-md border border-border/60"
             aria-label="Download PDF report"
           >
@@ -356,6 +355,10 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Benchmarks & Insights */}
+      <BenchmarkInsight snapshot={result} />
+      <TopOpportunities snapshot={result} />
 
       {/* AI Consultant Summary — progressively loaded */}
       <motion.div

@@ -139,6 +139,7 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
 - ✅ `createAdminClient()` stays server-side only (server components + API routes).
 - ✅ No environment variables or service-role keys exposed to client bundles.
 - ✅ Honeypot and rate limiting active on all POST routes.
+- ✅ All metrics piped through an internal API route to the `events` table (no client-side Supabase credentials).
 
 **Async resilience verification:**
 - ✅ AI summary fetches via client `useEffect` — never blocks SSR of deterministic content.
@@ -159,7 +160,14 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
 2. **No E2E tests**: Full "Audit → Share → Lead → Email" journey untested end-to-end. Playwright recommended.
 3. **No share page `loading.tsx`**: Next.js streaming handles this, but a custom skeleton could improve perceived quality.
 4. **Print CSS in inline `<style>` tag**: Works correctly, could be extracted to globals.css for cleanliness.
-5. **`formatCurrency` duplicated** across 4 files: audit-results, print-audit-view, opengraph-image, share page. Could extract to `src/lib/utils/format.ts`. Low priority.
+
+## Day 6 Additions (Analytics & Telemetry)
+- **`src/lib/observability/logger.ts`**: Centralized structured logging for all API routes and engine actions.
+- **`src/lib/config/flags.ts`**: Feature flag configuration for seamless toggle of experimental UI components.
+- **Analytics Events**: Plumbed via `src/lib/analytics/events.ts` and `src/app/api/events/route.ts` tracking `audit_started`, `audit_completed`, `share_link_copied`, `pdf_exported`, `lead_captured`, `ai_summary_generated`.
+- **Internal Dashboard**: Built an operational telemetry view at `/internal/insights` using aggregated database stats.
+- **Insights Components**: `BenchmarkInsight` and `TopOpportunities` seamlessly integrated into the public audit view.
+- **Core refactor**: Consolidated `formatCurrency` to `src/lib/utils/format.ts`.
 
 ## Deployment Notes
 
@@ -170,11 +178,8 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
 - **No edge runtime**: All server components use default Node.js runtime. OG image explicitly sets `runtime = "nodejs"`.
 
 ## Future Context (Day 6+)
-- **Analytics**: The `events` table is primed for funnel tracking.
-- **Benchmark Mode**: Result metadata includes `hasHighSavings` and `optimizedToolCount` to enable future industry benchmarking dashboards.
 - **Server-Side PDF**: The `/share/[slug]/print` architecture is designed to support migration to Puppeteer/Chromium-based PDF generation when needed.
 - **E2E Testing**: Add Playwright scenarios for the full "Audit → Lead Capture → Email" journey.
-- **formatCurrency extraction**: Centralize into `src/lib/utils/format.ts` when making next cross-file refactor.
 - **React `cache()` wrapper**: Deduplicate Supabase queries in share page metadata + component.
 
 ## Engineering Standards

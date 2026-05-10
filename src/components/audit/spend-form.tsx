@@ -27,6 +27,7 @@ import { auditInputSchema, type AuditInputForm } from "@/lib/validations/audit";
 import { pricingCatalog, getToolById } from "@/lib/engine/catalog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuditLoading } from "./audit-loading";
+import { trackEvent } from "@/lib/analytics/events";
 
 const DEFAULT_TOOL = {
   toolId: "",
@@ -116,6 +117,8 @@ export function SpendForm() {
     setIsAnalyzing(true);
     setServerError(null);
 
+    trackEvent({ type: "audit_started" });
+
     try {
       const response = await fetch("/api/audit", {
         method: "POST",
@@ -137,6 +140,7 @@ export function SpendForm() {
       router.push(`/share/${slug}`);
     } catch (error) {
       console.error("Submission error:", error);
+      trackEvent({ type: "audit_failed" });
       setServerError(error instanceof Error ? error.message : "An unexpected error occurred");
       setIsAnalyzing(false);
     }

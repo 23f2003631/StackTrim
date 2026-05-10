@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { PublicAuditSnapshot } from "../types/audit";
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+import { AnalyticsEventType } from "../analytics/events";
 
 /**
  * Generates a deterministic fallback summary when AI generation fails or times out.
@@ -23,11 +22,21 @@ function generateFallbackSummary(snapshot: PublicAuditSnapshot): string {
  * Uses a strict 4-second timeout to prevent blocking the UI.
  * Gracefully falls back to deterministic text on any failure.
  */
-export async function generateAuditSummary(snapshot: PublicAuditSnapshot): Promise<string> {
+export interface SummaryResult {
+  summary: string;
+  status: AnalyticsEventType;
+}
+
+export async function generateAuditSummary(snapshot: PublicAuditSnapshot): Promise<SummaryResult> {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
   // If no API key is present in dev environment, return fallback immediately
   if (!GEMINI_API_KEY) {
     console.warn("No GEMINI_API_KEY found. Using deterministic fallback summary.");
-    return generateFallbackSummary(snapshot);
+    return {
+      summary: generateFallbackSummary(snapshot),
+      status: "ai_summary_missing_key"
+    };
   }
 
   const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
@@ -73,7 +82,10 @@ ${JSON.stringify({
     clearTimeout(timeoutId);
 
     if (result.text) {
-      return result.text.trim();
+      return {
+        summary: result.text.trim(),
+        status: "ai_summary_generated"
+      };
     }
 
     throw new Error("Empty response from Gemini");
@@ -81,6 +93,18 @@ ${JSON.stringify({
     clearTimeout(timeoutId);
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("AI Summary Generation Failed:", errorMessage);
-    return generateFallbackSummary(snapshot);
+    
+    let status: AnalyticsEventType = "ai_summary_provider_failed";
+    
+    if (errorMessage.includes("Timeout") || errorMessage.includes("abort")) {
+      status = "ai_summary_timeout";
+    } else if (errorMessage.toLowerCase().includes("quota") || errorMessage.includes("429")) {
+      status = "ai_summary_quota_exhausted";
+    }
+
+    return {
+      summary: generateFallbackSummary(snapshot),
+      status
+    };
   }
 }

@@ -1,13 +1,6 @@
 import { PublicAuditSnapshot } from "@/lib/types/audit";
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatCurrency } from "@/lib/utils/format";
 
 export function renderAuditEmailHtml(
   snapshot: PublicAuditSnapshot,

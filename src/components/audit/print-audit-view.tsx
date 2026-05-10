@@ -10,22 +10,7 @@ interface PrintAuditViewProps {
   createdAt: string;
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
+import { formatCurrency, formatDate } from "@/lib/utils/format";
 
 const TYPE_LABELS: Record<string, string> = {
   downgrade: "Downgrade",

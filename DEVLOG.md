@@ -148,7 +148,6 @@
 2. **No E2E tests** for the full audit → lead → email journey. Playwright recommended for Day-6+.
 3. **No loading state for share page SSR**. Next.js streaming handles this, but a custom `loading.tsx` could improve perceived quality.
 4. **Print CSS uses inline `<style>` tag**. Works, but could be extracted to globals.css `@media print` block for cleanliness.
-5. **formatCurrency duplicated** across 4 files (audit-results, print-audit-view, opengraph-image, share page). Could extract to shared utility. Low priority.
 
 ### Day-6 prerequisites
 
@@ -161,6 +160,30 @@
 ### Time spent
 
 ~3 hours.
+
+## Day 6 — Telemetry, Benchmarks & Operational Maturity
+
+**Date:** 2026-05-10
+**Focus:** Analytics, internal telemetry, feature flags, structural cleanup
+
+### What I built
+
+1. **Analytics Architecture** — Secure, server-side event tracking piped via internal `/api/events` to avoid client-side credentials. Tracked `audit_started`, `audit_completed`, `share_link_copied`, `pdf_exported`, `lead_captured`, `ai_summary_generated`.
+2. **Feature Flags System** — Implemented `src/lib/config/flags.ts` for clean runtime control over benchmarks, AI providers, and internal views.
+3. **Internal Dashboard** — Built an aggregate telemetry UI at `/internal/insights` to monitor platform throughput and lead conversion.
+4. **Insights Components** — Engineered `BenchmarkInsight` and `TopOpportunities` components mapped to deterministic analysis criteria.
+5. **Architectural Cleanup** — Centralized `formatCurrency` utility and fully decoupled `logger` for observability.
+
+### Key decisions
+
+- **Server-Side Event Inserts**: Even client events route through `/api/events` instead of pinging Supabase directly, to enforce strict credential boundaries.
+- **Progressive Disclosure Insights**: Added `BenchmarkInsight` directly into the public snapshot view, driven dynamically by savings thresholds.
+
+### Remaining technical debt
+
+1. **Playwright E2E**: Needs integration for comprehensive visual and functional journey tests.
+2. **Dual Supabase query**: Unchanged from Day 5, low priority.
+3. **Print CSS extraction**: Inline `<style>` block remains functional but could be centralized.
 
 ---
 

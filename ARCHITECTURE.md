@@ -106,6 +106,12 @@ Geist is Vercel's font — it signals "modern SaaS" to our target audience. It's
 - No raw SQL — Supabase SDK only
 - Environment variables via `.env.local` (never committed)
 - Public snapshot sanitization strips all PII before DB persistence
+- **Secure Telemetry**: All client analytics events route through the server `/api/events` instead of pinging Supabase directly, preventing client credential exposure.
+
+## Observability & Configuration
+
+- **`logger.ts`**: Provides structured, tiered logging (`info`, `warn`, `error`, `metric`) decoupled from raw `console.log`. Safe for server components.
+- **`flags.ts`**: Centralized configuration management to toggle feature sets like `enableBenchmarks` or `enableTopOpportunities` at runtime.
 
 ## Async Rendering Strategy
 

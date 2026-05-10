@@ -5,14 +5,7 @@ import { describe, it, expect } from "vitest";
  * These test the data formatting functions used in the OG image and share page metadata.
  */
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatCurrency } from "@/lib/utils/format";
 
 function pluralizeTools(count: number): string {
   return `across ${count} AI tool${count !== 1 ? "s" : ""}`;

@@ -5,15 +5,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { PublicAuditSnapshot } from "@/lib/types/audit";
 import { AuditResults } from "@/components/audit/audit-results";
 import { Shield } from "lucide-react";
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+import { formatCurrency } from "@/lib/utils/format";
 
 export async function generateMetadata({
   params,
