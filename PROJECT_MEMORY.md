@@ -123,30 +123,63 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
   - OG metadata formatting tests (11 new).
   - Print/PDF formatting tests (10 new).
 
-## File Structure Map
-- `src/app/api/audit/route.ts` - Central processing and DB persistence handler.
-- `src/app/share/[slug]/page.tsx` - Public, sanitized result page with dynamic OG metadata.
-- `src/app/share/[slug]/opengraph-image.tsx` - Dynamic OG image generation.
-- `src/app/share/[slug]/print/page.tsx` - Dedicated print/PDF route.
-- `src/components/audit/spend-form.tsx` - Complex dynamic form with LocalStorage recovery and stable hook architecture.
-- `src/components/audit/audit-results.tsx` - Premium financial result presentation with animations.
-- `src/components/audit/audit-loading.tsx` - Phased loading state for audit submission.
-- `src/components/audit/print-audit-view.tsx` - Print-optimized audit report layout.
-- `src/components/audit/lead-capture-form.tsx` - Lead capture with calm success states.
-- `src/lib/supabase/` - Client and server boundaries for Supabase.
-- `src/lib/ai/` - Resilient Gemini v2.0 integrations with deterministic fallbacks.
-- `supabase/migrations/` - SQL migration source of truth.
-- `SUPABASE_SETUP.md` - Mandatory setup instructions and architectural rationale.
+## Day 5 Stabilization Pass (Post-Implementation)
 
+**All quality gates confirmed green:**
+
+| Gate | Result |
+|------|--------|
+| `npm run lint` | ✅ Zero errors |
+| `npx tsc --noEmit` | ✅ Zero errors |
+| `npm test` | ✅ 153 tests (9 test files) |
+| `npm run build` | ✅ Clean production build |
+
+**Security verification:**
+- ✅ All share routes use `public_snapshot` only — no PII leakage.
+- ✅ `createAdminClient()` stays server-side only (server components + API routes).
+- ✅ No environment variables or service-role keys exposed to client bundles.
+- ✅ Honeypot and rate limiting active on all POST routes.
+
+**Async resilience verification:**
+- ✅ AI summary fetches via client `useEffect` — never blocks SSR of deterministic content.
+- ✅ `AbortController` with 8s timeout on client-side summary fetch.
+- ✅ Gemini API has 4s server-side timeout + deterministic fallback.
+- ✅ Lead is persisted before email dispatch; email failure never blocks lead save.
+- ✅ Missing `GEMINI_API_KEY` triggers clean fallback path (verified in tests).
+
+**Mobile responsiveness verification:**
+- ✅ Hero cards stack to single column on mobile (`sm:grid-cols-3` default `grid-cols-1`).
+- ✅ Print view header/grid/footer responsive (flex-col on small screens).
+- ✅ Audit ID badge hidden on mobile to prevent header crowding.
+- ✅ Share/PDF buttons visible on mobile.
+
+## Known Technical Debt
+
+1. **Dual Supabase query on share pages**: `generateMetadata()` and page component both call `createAdminClient()` separately. Next.js `fetch` deduplication doesn't apply to Supabase SDK. Could wrap with React `cache()`. Low priority at current scale.
+2. **No E2E tests**: Full "Audit → Share → Lead → Email" journey untested end-to-end. Playwright recommended.
+3. **No share page `loading.tsx`**: Next.js streaming handles this, but a custom skeleton could improve perceived quality.
+4. **Print CSS in inline `<style>` tag**: Works correctly, could be extracted to globals.css for cleanliness.
+5. **`formatCurrency` duplicated** across 4 files: audit-results, print-audit-view, opengraph-image, share page. Could extract to `src/lib/utils/format.ts`. Low priority.
+
+## Deployment Notes
+
+- **Required env vars**: `GEMINI_API_KEY`, `RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_FROM_EMAIL`.
+- **Optional env var**: `NEXT_PUBLIC_SITE_URL` — used for metadataBase, JSON-LD canonical URL, and OG image URL resolution. Defaults to `https://stacktrim.dev`.
+- **Resend domain**: Currently using `onboarding@resend.dev` in development. Requires verified domain for production.
+- **Build target**: `npm run build` produces static pages (`/`, `/audit`) and dynamic routes (`/api/*`, `/share/*`).
+- **No edge runtime**: All server components use default Node.js runtime. OG image explicitly sets `runtime = "nodejs"`.
 
 ## Future Context (Day 6+)
 - **Analytics**: The `events` table is primed for funnel tracking.
 - **Benchmark Mode**: Result metadata includes `hasHighSavings` and `optimizedToolCount` to enable future industry benchmarking dashboards.
 - **Server-Side PDF**: The `/share/[slug]/print` architecture is designed to support migration to Puppeteer/Chromium-based PDF generation when needed.
 - **E2E Testing**: Add Playwright scenarios for the full "Audit → Lead Capture → Email" journey.
+- **formatCurrency extraction**: Centralize into `src/lib/utils/format.ts` when making next cross-file refactor.
+- **React `cache()` wrapper**: Deduplicate Supabase queries in share page metadata + component.
 
 ## Engineering Standards
 - **Trust First**: No AI-driven hallucinations in financial outputs.
 - **Strict Typing**: All schemas, inputs, and outputs use rigid Zod and TS definitions.
 - **Screenshot Worthy**: Every final user-facing view must look worthy of a Product Hunt launch.
 - **Ramp/Mercury Aesthetic**: Animations are subtle, finance-appropriate, and never flashy.
+- **Graceful Degradation**: Every external provider boundary (AI, Email, DB) has explicit fallback behavior.

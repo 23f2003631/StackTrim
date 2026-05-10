@@ -301,7 +301,7 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
             PDF
           </Link>
           {/* Audit ID */}
-          <span className="text-xs text-muted-foreground font-mono bg-secondary px-2 py-1 rounded-md">
+          <span className="hidden sm:inline text-xs text-muted-foreground font-mono bg-secondary px-2 py-1 rounded-md">
             ID: {referenceId.slice(0, 8)}
           </span>
         </div>

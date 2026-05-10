@@ -90,4 +90,78 @@
 
 ---
 
+## Day 5 — Launch-Quality Polish & Premium Features
+
+**Date:** 2026-05-09
+**Focus:** OG images, PDF export, AI summary performance, result page polish, SEO, mobile responsiveness
+
+### What I built
+
+1. **Dynamic OG Image Generation** — `src/app/share/[slug]/opengraph-image.tsx` renders premium dark-themed cards per audit using Next.js `ImageResponse`. Dominant annual savings number, minimal branding, catalog version footer.
+2. **Dynamic Share Page Metadata** — Converted static metadata to `generateMetadata()` with per-audit title, description, OpenGraph, and Twitter Card tags.
+3. **Dedicated Print/PDF Route** — `/share/[slug]/print` renders an isolated, investor-ready layout with: summary metrics, executive summary, all recommendations, generated timestamp, catalog version, engine version, and StackTrim methodology disclosure. Auto-triggers `window.print()` on mount.
+4. **Result Page Polish** — Subtle Framer Motion entrance animations (fade-up, stagger). Skeleton loading for AI summary. Copy-to-clipboard share button with calm success feedback. PDF export button. Improved accessibility (`aria-expanded`, `aria-label`, `role` attributes).
+5. **Premium Loading States** — `AuditLoading` component with phased progress messages ("Validating input data...", "Running audit engine...", "Detecting overlaps..."). Integrated into SpendForm during submission.
+6. **AI Summary Performance** — `AbortController` with 8s client-side timeout. `Cache-Control` headers on summary API (cached: `max-age=3600`, fresh: `max-age=300`).
+7. **Lead Capture Polish** — Calm emerald success state with check icon. No confetti. Improved form accessibility.
+8. **SEO Optimization** — `metadataBase` for proper OG URL resolution. Title template (`%s — StackTrim`). JSON-LD structured data (`WebApplication` schema). Canonical URLs. Robots directives.
+9. **Trust Messaging** — Share page footer: "Public links never expose private company details."
+10. **Mobile Responsiveness** — Print view header/grid/footer stack vertically on small screens. Audit ID badge hidden on mobile. All cards responsive.
+11. **Expanded Tests** — 153 tests (up from 132): OG metadata formatting (11), print formatting (10).
+
+### Key decisions
+
+- **Dedicated print route** over `window.print()` on main page: Cleaner separation, future-compatible with server-side PDF generation (Puppeteer/Chromium).
+- **Named easing** (`"easeOut"`) over cubic bezier arrays: Framer Motion v12 strict tuple typing makes numeric arrays fail TypeScript.
+- **Skeleton over spinner**: Perceived performance dramatically better with content-shaped placeholders.
+- **Zero new dependencies**: Everything built with existing stack (framer-motion, next/og, lucide-react).
+- **Ramp/Mercury aesthetic**: All animations are subtle, finance-appropriate, and never flashy.
+
+### Architecture observations
+
+- **Dual DB call on share pages**: `generateMetadata()` and the page component both call `createAdminClient()`. Next.js deduplication doesn't apply to Supabase SDK (only raw `fetch`). Acceptable at current scale; could optimize with React `cache()` wrapper if needed.
+- **Print page is "use client"**: Required for `useEffect` auto-print trigger. Could potentially be a server component with a client-side print button instead, but current approach is simpler.
+- **OG image uses inline types**: Inlined snapshot type instead of importing `PublicAuditSnapshot` to keep the OG image route self-contained and avoid edge runtime issues.
+
+### Day-5 Stabilization Pass
+
+| Gate | Status |
+|------|--------|
+| `npm run lint` | ✅ Zero errors |
+| `npx tsc --noEmit` | ✅ Zero errors |
+| `npm test` | ✅ 153 tests |
+| `npm run build` | ✅ Clean production build |
+
+**Route map (post-build):**
+- `○ /` — Static landing
+- `○ /audit` — Static form
+- `ƒ /api/audit` — Dynamic (POST)
+- `ƒ /api/audit/[slug]/summary` — Dynamic (GET)
+- `ƒ /api/lead` — Dynamic (POST)
+- `ƒ /share/[slug]` — Dynamic (SSR + OG)
+- `ƒ /share/[slug]/print` — Dynamic (SSR + auto-print)
+- `ƒ /share/-/opengraph-image` — Dynamic (OG image gen)
+
+### Remaining technical debt
+
+1. **Dual Supabase query** on share pages (metadata + page). Low priority — marginal performance impact.
+2. **No E2E tests** for the full audit → lead → email journey. Playwright recommended for Day-6+.
+3. **No loading state for share page SSR**. Next.js streaming handles this, but a custom `loading.tsx` could improve perceived quality.
+4. **Print CSS uses inline `<style>` tag**. Works, but could be extracted to globals.css `@media print` block for cleanliness.
+5. **formatCurrency duplicated** across 4 files (audit-results, print-audit-view, opengraph-image, share page). Could extract to shared utility. Low priority.
+
+### Day-6 prerequisites
+
+- All quality gates green ✅
+- Production build clean ✅
+- Architecture documented ✅
+- No blocking issues
+- Ready for: analytics integration, benchmark dashboards, or domain verification
+
+### Time spent
+
+~3 hours.
+
+---
+
 *Entries will be added daily as development continues.*

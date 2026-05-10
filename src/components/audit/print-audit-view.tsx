@@ -104,7 +104,7 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
       `}</style>
 
       {/* Header */}
-      <header className="flex items-center justify-between pb-6 border-b border-gray-200 mb-8">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200 mb-8">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-900">
             <span className="text-xs font-bold text-white">ST</span>
@@ -121,7 +121,7 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
       </header>
 
       {/* Summary Metrics */}
-      <section className="grid grid-cols-3 gap-6 mb-8">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
         <div className="bg-emerald-50 rounded-lg p-5 border border-emerald-200">
           <p className="text-xs font-medium text-emerald-700 mb-1">Monthly Savings</p>
           <p className="text-3xl font-bold text-emerald-900 tracking-tight">
@@ -189,7 +189,7 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
 
       {/* Footer */}
       <footer className="pt-6 border-t border-gray-200 mt-12">
-        <div className="flex justify-between items-end">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div className="text-xs text-gray-400 space-y-1">
             <p>
               <strong>Methodology:</strong> All recommendations based on publicly available pricing data.
