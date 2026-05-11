@@ -152,3 +152,29 @@
     @apply font-sans;
   }
 }
+
+/* Print optimizations */
+@media print {
+  body { 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact; 
+  }
+  .print-page { 
+    padding: 0; 
+  }
+  .no-print { 
+    display: none !important; 
+  }
+  @page { 
+    margin: 0.75in; 
+    size: letter; 
+  }
+}
+
+@media screen {
+  .print-page { 
+    max-width: 800px; 
+    margin: 0 auto; 
+    padding: 2rem; 
+  }
+}

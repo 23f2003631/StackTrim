@@ -59,7 +59,7 @@ export function TopOpportunities({ snapshot }: TopOpportunitiesProps) {
               Audit license usage
             </p>
             <p className="text-xs text-slate-600 mt-1">
-              "Rightsize" recommendations can usually be executed without migrating systems.
+              &quot;Rightsize&quot; recommendations can usually be executed without migrating systems.
             </p>
           </div>
         </CardContent>

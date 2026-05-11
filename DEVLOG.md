@@ -185,6 +185,29 @@
 2. **Dual Supabase query**: Unchanged from Day 5, low priority.
 3. **Print CSS extraction**: Inline `<style>` block remains functional but could be centralized.
 
+## Day 7 — Final Deployment Hardening & Presentation
+
+**Date:** 2026-05-10
+**Focus:** Production readiness, error boundaries, portfolio-quality documentation
+
+### What I built
+
+1. **Global Error Boundaries** — Added `src/app/error.tsx` and `src/app/not-found.tsx` to handle uncaught errors gracefully without leaking stack traces.
+2. **UI/UX Polish** — Extracted print styles from inline tags into `globals.css` and fixed unescaped React quotes.
+3. **Documentation Overhaul** — Completely rewrote `README.md` to YC-demo quality, adding explicit architectural tradeoffs, product philosophy, and security documentation.
+4. **Demo Guides** — Created `DEMO_SCENARIOS.md` to curate the perfect recruiter walkthrough.
+5. **Deployment Runbook** — Extracted deployment specifics into a dedicated `DEPLOYMENT.md` guide covering Vercel, Supabase, Resend, and Gemini.
+
+### Key decisions
+
+- **Graceful Fallbacks First**: Re-verified all fallback logic for API key absences and third-party downtime. The system must degrade to deterministic results, never 500ing on the client.
+- **Architecture Freeze**: Refused unnecessary rewrites in favor of stability and polish.
+
+### Final Technical Debt
+
+1. **In-Memory Rate Limiting**: Can be swapped for Redis if deployed to edge/multi-region.
+2. **Print-based PDF Export**: Fully functional, but could be augmented with server-side generation later.
+
 ---
 
-*Entries will be added daily as development continues.*
+*StackTrim v1.0 Launch Complete.*

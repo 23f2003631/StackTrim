@@ -75,18 +75,7 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
 
   return (
     <div className="print-page min-h-screen bg-white text-gray-900">
-      {/* Print-only styles */}
-      <style>{`
-        @media print {
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .print-page { padding: 0; }
-          .no-print { display: none !important; }
-          @page { margin: 0.75in; size: letter; }
-        }
-        @media screen {
-          .print-page { max-width: 800px; margin: 0 auto; padding: 2rem; }
-        }
-      `}</style>
+
 
       {/* Header */}
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200 mb-8">

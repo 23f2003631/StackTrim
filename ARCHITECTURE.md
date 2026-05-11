@@ -158,6 +158,12 @@ Geist is Vercel's font — it signals "modern SaaS" to our target audience. It's
 - **Rendering**: `PrintAuditView` is a `"use client"` component (required for `useEffect` auto-print)
 - **Print trigger**: `window.print()` fires after 600ms layout delay
 - **Includes**: Timestamp, catalog version, engine version, methodology disclosure, report link
+
+## Error Boundaries & Graceful Degradation
+
+- **Global Handling**: `error.tsx` provides a calm, premium fallback UI for uncaught server/client exceptions without exposing stack traces to end users.
+- **Not Found**: `not-found.tsx` guarantees a polished 404 experience with clear navigation back to the audit creation flow.
+- **Fail-Open External Boundaries**: Gemini timeouts and quota limits are safely caught and tracked, immediately serving deterministic fallback logic without ever returning a 500 status to the client.
 - **Future path**: Architecture supports migration to server-side Puppeteer PDF if needed
 
 ## Fallback Systems

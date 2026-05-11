@@ -169,6 +169,17 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
 - **Insights Components**: `BenchmarkInsight` and `TopOpportunities` seamlessly integrated into the public audit view.
 - **Core refactor**: Consolidated `formatCurrency` to `src/lib/utils/format.ts`.
 
+## Day 7: Final Deployment Hardening & Stabilization
+
+- **Global Error Boundaries**: Created `src/app/error.tsx` and `src/app/not-found.tsx` to handle uncaught errors gracefully without leaking stack traces.
+- **UI/UX Polish**: Extracted print styles from inline `<style>` tags into `globals.css` and fixed unescaped React quotes.
+- **Documentation Overhaul**: 
+  - Rewrote `README.md` to YC-demo quality, adding explicit architectural tradeoffs, product philosophy, and security documentation.
+  - Created `DEMO_SCENARIOS.md` to curate the perfect recruiter walkthrough.
+  - Extracted deployment specifics into `DEPLOYMENT.md` covering Vercel, Supabase, Resend, and Gemini.
+- **Graceful Fallbacks First**: Re-verified all fallback logic for API key absences and third-party downtime. The system degrades to deterministic results, never 500ing on the client.
+- **Architecture Freeze**: Refused unnecessary rewrites in favor of stability and polish.
+
 ## Deployment Notes
 
 - **Required env vars**: `GEMINI_API_KEY`, `RESEND_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_FROM_EMAIL`.
@@ -177,7 +188,9 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
 - **Build target**: `npm run build` produces static pages (`/`, `/audit`) and dynamic routes (`/api/*`, `/share/*`).
 - **No edge runtime**: All server components use default Node.js runtime. OG image explicitly sets `runtime = "nodejs"`.
 
-## Future Context (Day 6+)
+## Future Context (Day 7+)
+- **SAML/SSO Integration**: Add enterprise authentication for larger teams.
+- **Automated De-provisioning**: Integrate with Okta/Google Workspace to automatically revoke unused licenses.
 - **Server-Side PDF**: The `/share/[slug]/print` architecture is designed to support migration to Puppeteer/Chromium-based PDF generation when needed.
 - **E2E Testing**: Add Playwright scenarios for the full "Audit → Lead Capture → Email" journey.
 - **React `cache()` wrapper**: Deduplicate Supabase queries in share page metadata + component.
