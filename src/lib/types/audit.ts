@@ -162,6 +162,8 @@ export interface Recommendation {
   postOptimizationSpend?: number;
   /** [V3 Pipeline] Contextual note if this recommendation depends on a previous one */
   contextualNote?: string;
+  /** [V4 Realism] Catalog version used for this recommendation */
+  catalogVersion?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -283,6 +285,8 @@ export interface PublicRecommendation {
   modifies?: OptimizationModifier;
   /** [V4 Realism] Structured reasoning for public display */
   reasoningDetails?: RecommendationReasoning;
+  /** [V4 Realism] Catalog version used for this recommendation */
+  catalogVersion?: string;
 }
 
 // ---------------------------------------------------------------------------

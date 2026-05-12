@@ -111,6 +111,7 @@ function sanitizeRecommendation(rec: Recommendation): PublicRecommendation {
     contextualNote: rec.contextualNote,
     modifies: rec.modifies,
     reasoningDetails: rec.reasoningDetails,
+    catalogVersion: rec.catalogVersion,
   };
 }
 

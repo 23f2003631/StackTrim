@@ -37,7 +37,8 @@ describe("Audit Analyzer", () => {
 
       const rightsizeRec = recs.find((r) => r.type === "rightsize");
       expect(rightsizeRec).toBeDefined();
-      expect(rightsizeRec!.monthlySavings).toBe(5 * 19); // 5 excess seats × $19/seat
+      // REALISM: 5 excess seats. Reduction ratio 0.7 -> 3 seats removed. 3 * $19 = $57.
+      expect(rightsizeRec!.monthlySavings).toBe(57); 
     });
 
     it("should include calculation breakdown for rightsizing", () => {

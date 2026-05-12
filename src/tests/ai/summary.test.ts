@@ -40,6 +40,9 @@ describe("AI Summary Generation", () => {
       hasHighSavings: false,
       hasOverlappingTools: false,
       optimizedToolCount: 4,
+      usedManualOverride: false,
+      maxMismatchSeverity: "none",
+      savingsRealismLevel: "normal",
     }
   };
 

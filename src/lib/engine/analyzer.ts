@@ -529,6 +529,7 @@ export function generateAuditResult(input: AuditInput): AuditResult {
 
   allRecommendations.forEach((rec, index) => {
     rec.priority = index + 1;
+    rec.catalogVersion = pricingCatalog.version;
   });
 
   // --- Phase 6: Aggregate totals with safeguards ---

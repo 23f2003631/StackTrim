@@ -27,21 +27,23 @@ describe("Sequential Optimization Pipeline", () => {
     // Initial Spend: 550
     // Step 1: Downgrade to Pro ($20/seat)
     //   11 seats * $20 = $220. Savings = 550 - 220 = $330.
-    // Step 2: Rightsize to team size (5 seats)
-    //   5 seats * $20 = $100. Savings = 220 - 100 = $120.
-    // Total Savings should be 330 + 120 = $450.
-    // Final Optimized Spend should be $100.
+    // Step 2: Realistic Rightsize to team size (5)
+    //   Excess = 6. Reduction ratio 0.7 -> 4 seats removed.
+    //   New seats = 11 - 4 = 7.
+    //   7 seats * $20 = $140. Savings = 220 - 140 = $80.
+    // Total Savings should be 330 + 80 = $410.
+    // Final Optimized Spend should be $140.
 
     expect(result.totalMonthlySpend).toBe(550);
-    expect(result.totalMonthlySavings).toBe(450);
-    expect(result.totalMonthlySavings / result.totalMonthlySpend).toBeCloseTo(0.818, 3);
+    expect(result.totalMonthlySavings).toBe(410);
+    expect(result.totalMonthlySavings / result.totalMonthlySpend).toBeCloseTo(0.745, 3);
     
     // Check recommendations
     const downgrade = result.recommendations.find(r => r.type === "downgrade");
     const rightsize = result.recommendations.find(r => r.type === "rightsize");
 
     expect(downgrade?.monthlySavings).toBe(330);
-    expect(rightsize?.monthlySavings).toBe(120);
+    expect(rightsize?.monthlySavings).toBe(80);
     expect(rightsize?.contextualNote).toBe("Assumes previous plan optimization");
   });
 
