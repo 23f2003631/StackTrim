@@ -44,8 +44,28 @@ function PrintRecommendation({ rec, index }: { rec: PublicRecommendation; index:
             <span className="text-xs text-gray-400">
               {CONFIDENCE_LABELS[rec.confidence]} confidence
             </span>
+            {rec.customContractLikely && (
+              <span className="text-xs font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                Custom pricing
+              </span>
+            )}
+            {rec.contextualNote && (
+              <span className="text-[9px] uppercase tracking-wider font-bold text-gray-400 bg-gray-50 px-1 py-0.5 rounded border border-gray-100">
+                {rec.contextualNote}
+              </span>
+            )}
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">{rec.reasoning}</p>
+          <p className="text-sm text-gray-600 leading-relaxed mb-2">{rec.reasoning}</p>
+          
+          {rec.reasoningDetails?.detectedSignals && (
+            <div className="flex flex-wrap gap-2 mb-1">
+              {rec.reasoningDetails.detectedSignals.map((signal, i) => (
+                <span key={i} className="text-[9px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 italic">
+                  • {signal}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {rec.monthlySavings > 0 && (
           <div className="text-right shrink-0">
@@ -123,11 +143,52 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
 
       {/* AI Summary */}
       {aiSummary && (
-        <section className="mb-8 bg-gray-50 rounded-lg p-5 border border-gray-200">
-          <h2 className="text-sm font-semibold text-gray-800 mb-2">Executive Summary</h2>
-          <p className="text-sm text-gray-700 leading-relaxed">{aiSummary}</p>
+        <section className="mb-8 bg-gray-50/50 rounded-lg p-5 border border-gray-200">
+          <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Executive Summary</h2>
+          <p className="text-sm text-gray-700 leading-relaxed italic border-l-2 border-gray-200 pl-4">
+            &quot;{aiSummary}&quot;
+          </p>
         </section>
       )}
+
+      {/* Page 2: Methodology & Trust Modeling (Executive Context) */}
+      <section className="mb-12 page-break-after">
+        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4">Audit Methodology & Trust Modeling</h2>
+        <div className="grid grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xs font-semibold text-gray-900 mb-1">Deterministic Optimization</h3>
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                Savings calculations are derived strictly from public catalog data (v{snapshot.catalogVersion}). No AI is used for financial computation. Analysis is bounded by actual user-entered spend to account for custom enterprise contracts.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold text-gray-900 mb-1">Savings Realism Level: <span className="uppercase text-emerald-700">{snapshot.metadata.savingsRealismLevel}</span></h3>
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                This audit assumes a <strong>{snapshot.metadata.savingsRealismLevel}</strong> approach to cost reduction. Conservative seat rightsizing (60-80% of excess) is applied to maintain organizational operational buffer.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-xs font-semibold text-gray-900 mb-1">Confidence Scoring</h3>
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                Confidence levels are degraded based on pricing consistency (mismatch severity: {snapshot.metadata.maxMismatchSeverity}) and organizational complexity assumptions. High confidence indicates reliable public pricing and simple migration paths.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold text-gray-900 mb-1">Operational Philosophy</h3>
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                StackTrim prioritizes <strong>believability</strong> over maximum theoretical savings. Recommendations account for migration friction, feature redundancy, and seat-utilization inertia typical of growing engineering teams.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-6 p-4 bg-amber-50/50 border border-amber-100 rounded text-[10px] text-amber-800 leading-relaxed">
+          <strong>Enterprise Pricing Disclaimer:</strong> Identified deviations suggest potential custom contract terms. Recommendations should be validated against actual contract addendums, as negotiated volume discounts or legacy credits may impact final savings realization.
+        </div>
+      </section>
 
       {/* Actionable Recommendations */}
       {actionableRecs.length > 0 && (

@@ -63,6 +63,9 @@ export function createPublicSnapshot(result: AuditResult): PublicAuditSnapshot {
       hasHighSavings: result.savingsPercentage >= 15,
       hasOverlappingTools: result.hasOverlappingTools,
       optimizedToolCount: result.optimizedToolCount,
+      usedManualOverride: result.usedManualOverride,
+      maxMismatchSeverity: result.maxMismatchSeverity,
+      savingsRealismLevel: result.savingsRealismLevel,
     },
   };
 }
@@ -104,6 +107,10 @@ function sanitizeRecommendation(rec: Recommendation): PublicRecommendation {
     confidence: rec.confidence,
     monthlySavings: rec.monthlySavings,
     annualSavings: rec.annualSavings,
+    customContractLikely: rec.pricingConsistency?.customContractLikely,
+    contextualNote: rec.contextualNote,
+    modifies: rec.modifies,
+    reasoningDetails: rec.reasoningDetails,
   };
 }
 

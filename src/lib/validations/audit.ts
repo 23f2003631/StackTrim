@@ -21,6 +21,7 @@ export const toolEntrySchema = z.object({
     .min(1, "At least 1 seat required")
     .max(1000, "Please verify seat count"),
   useCases: z.array(z.string()).default([]),
+  isManualOverride: z.boolean().default(false).optional(),
 });
 
 /** Schema for the full audit form */

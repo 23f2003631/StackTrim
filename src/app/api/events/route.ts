@@ -19,8 +19,11 @@ const eventSchema = z.object({
     "ai_summary_missing_key",
     "ai_summary_provider_failed",
     "consultation_cta_clicked",
+    "pricing_mismatch_detected",
+    "catalog_pricing_reset_clicked",
+    "manual_pricing_override_enabled",
   ]),
-  auditId: z.string().uuid().optional(),
+  auditId: z.string().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 

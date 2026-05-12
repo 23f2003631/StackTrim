@@ -40,6 +40,30 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
 - **Asynchronous Route Params**: In Next.js 15+, `params` passed to pages and layouts is a Promise. Accessing properties synchronously (e.g., `params.slug`) evaluates to `undefined`, which caused the Supabase query `.eq("slug", params.slug)` to silently fail and trigger the 404 `notFound()` fallback. The page was updated to explicitly `await params` (`const { slug } = await params;`).
 - **Supabase Environment Variables**: Ensure `NEXT_PUBLIC_SUPABASE_URL` is a fully qualified URL (e.g., `https://[ref].supabase.co`). Missing the protocol causes silent URL parsing failures.
 
+### Phase 4: Financial Realism & Trust Modeling (Current)
+- **Realism Moderation**: Savings classified into `normal`, `aggressive`, and `extreme` tiers.
+- **Partial Optimization**: No longer assumes 100% seat reduction; uses `calculateOptimizableSeats` to account for organizational overhead.
+- **Structured Reasoning**: Recommendations now include `detectedSignals` and `usageAssumptions` for boardroom-quality transparency.
+- **Confidence Overhaul**: High confidence is now rare and reserved for simple, deterministic, and pricing-consistent opportunities.
+- **Executive PDF**: Redesigned Page 2 to include Methodology, Philosophy, and Enterprise Disclaimers.
+
+### Financial Realism & Trust Model
+StackTrim operates as a **conservative operational advisor**, not an optimization calculator. 
+
+**Core Principles:**
+1. **Trust Over Numbers**: We prefer believable 15% savings over unrealistic 70% savings.
+2. **Organizational Inertia**: We assume companies cannot cut 100% of excess seats immediately.
+3. **Enterprise Awareness**: Large teams (10+) on "critical" tools (Slack, GitHub) are rarely candidates for Free-tier downgrades due to security/compliance needs.
+4. **Deterministic Integrity**: All financial calculations are deterministic. AI is strictly used for narrative and summarization.
+
+**Realism Thresholds:**
+- **0-15% (Normal)**: Low friction, high believability.
+- **15-35% (Aggressive)**: Requires operational audit.
+- **35%+ (Extreme)**: Highly suspicious; results depend on extreme organizational change.
+
+**Reasoning Engine:**
+Every recommendation must explain **WHY** it exists (Detected Signals) and what **ASSUMPTIONS** were made (Usage/Migration).
+
 ### Day 4: Lead Generation & Trust UX
 - **AI Summary Integration**:
   - Implemented `@google/genai` to generate personalized summaries.
@@ -179,6 +203,27 @@ Build StackTrim, a high-stakes AI spend audit platform optimized for B2B SaaS fo
   - Extracted deployment specifics into `DEPLOYMENT.md` covering Vercel, Supabase, Resend, and Gemini.
 - **Graceful Fallbacks First**: Re-verified all fallback logic for API key absences and third-party downtime. The system degrades to deterministic results, never 500ing on the client.
 - **Architecture Freeze**: Refused unnecessary rewrites in favor of stability and polish.
+
+### Day 8: Pricing Consistency & Stateful Optimization Pipeline
+- **Pricing Consistency Engine (`pricing.ts`)**: Implemented `PricingMismatchSeverity` (none, low, medium, high, extreme) to classify trust levels when users override catalog pricing.
+- **Bounded Savings**: Added `capSavingsPotential` to prevent mathematically impossible savings in cases of extreme pricing mismatch (e.g., capping at 2x catalog theoreticals).
+- **Stateful Optimization Pipeline (`pipeline.ts`)**: Refactored the audit engine from a naive additive model to a sequential pipeline.
+    - **Priority Order**: `Consolidate` -> `Downgrade` -> `Rightsize` -> `Credits`.
+    - **Dependency Resolution**: Each optimization step updates the tool's `OptimizedToolState`. Subsequent steps (e.g., rightsizing) use the *new* plan price if a downgrade was already applied.
+    - **Anti-Double-Counting**: Total savings are calculated as the difference between original total and final optimized total, ensuring they never exceed 100%.
+- **Pipeline Awareness in UI**: Added `contextualNote` to recommendations (e.g., "Assumes previous plan optimization") to maintain trust in the additive logic.
+- **Test Coverage**: Added `pipeline.test.ts` to verify complex multi-step optimization scenarios. Total test count is now 172.
+- **Frontend UX (Manual Override)**:
+  - `SpendForm` now features intelligent auto-fill from catalog data with a "Manual Override" state.
+  - Added a premium "Custom pricing active" UI badge with contextual tooltips explaining enterprise/negotiated contract assumptions.
+  - Implemented "Use catalog pricing" reset flow with integrated analytics.
+- **Sanitization & Public Transparency**:
+  - Extended `PublicAuditSnapshot` and `PublicRecommendation` to include `customContractLikely` metadata.
+  - Surfaced "Custom pricing" indicators on share pages and PDF exports to signal operational skepticism.
+- **Observability & Analytics**:
+  - Added telemetry for `pricing_mismatch_detected`, `manual_pricing_override_enabled`, and `catalog_pricing_reset_clicked`.
+- **Build & Test**:
+  - Reached 169 automated tests passing (+16 new tests for pricing boundaries and analyzer logic).
 
 ## Deployment Notes
 

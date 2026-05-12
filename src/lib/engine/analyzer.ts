@@ -49,7 +49,24 @@ import {
   consolidationConfidence,
   creditConfidence,
   isPricingFresh,
+  degradeConfidenceForMismatch,
 } from "@/lib/engine/confidence";
+import {
+  computeExpectedSpend,
+  computeDeviation,
+  classifyMismatchSeverity,
+  isCustomContractLikely,
+  capSavingsPotential,
+} from "@/lib/engine/pricing";
+import {
+  runOptimizationPipeline,
+  clampSavings,
+} from "@/lib/engine/pipeline";
+import {
+  classifySavingsRealism,
+  calculateOptimizableSeats,
+  isFreeTierRealistic,
+} from "@/lib/engine/realism";
 
 // ---------------------------------------------------------------------------
 // ID generation
@@ -82,41 +99,96 @@ export function analyzeToolSpend(
   const recommendations: Recommendation[] = [];
   const pricingFresh = isPricingFresh(catalogEntry.lastVerified);
 
+  // --- Setup pricing consistency ---
+  const currentPlan = catalogEntry.plans.find((p) => p.id === entry.planTier);
+  const planPrice = currentPlan ? currentPlan.monthlyPricePerSeat : 0;
+  
+  const expectedSpend = computeExpectedSpend(planPrice, entry.seats);
+  const actualSpend = entry.monthlySpend;
+  const deviation = computeDeviation(actualSpend, expectedSpend);
+  const severity = classifyMismatchSeverity(deviation);
+  const customContract = isCustomContractLikely(severity);
+  
+  const consistency: Recommendation["pricingConsistency"] = {
+    expectedSpend,
+    actualSpend,
+    deviationPercentage: deviation * 100,
+    severity,
+    customContractLikely: customContract,
+  };
+
   // --- Seat rightsizing ---
-  if (entry.seats > teamSize) {
+  if (entry.seats > teamSize && currentPlan && planPrice > 0) {
     const excess = excessSeats(entry.seats, teamSize);
-    const currentPlan = catalogEntry.plans.find((p) => p.id === entry.planTier);
-    if (currentPlan && currentPlan.monthlyPricePerSeat > 0) {
-      const monthlySavings = excessSeatSavings(
-        entry.seats,
-        teamSize,
-        currentPlan.monthlyPricePerSeat
-      );
-      if (monthlySavings > 0) {
-        const confidence = scoreConfidence(rightsizingConfidence(pricingFresh));
+    
+    // Theoretical savings if they right-sized the *catalog* amount
+    const catalogMonthlySavings = excessSeatSavings(
+      entry.seats,
+      teamSize,
+      planPrice
+    );
+    
+    // Bounded savings based on their *actual* entered spend vs extreme mismatch
+    const expectedOptimizedSpend = computeExpectedSpend(planPrice, teamSize);
+    const monthlySavings = capSavingsPotential(actualSpend, expectedSpend, expectedOptimizedSpend, severity);
+    
+    if (monthlySavings > 0) {
+      const baseConfidence = scoreConfidence(rightsizingConfidence(pricingFresh)).level;
+      const confidence = degradeConfidenceForMismatch(baseConfidence, severity);
         const calculation: CalculationBreakdown = {
           currentPlanName: currentPlan.name,
           recommendedPlanName: currentPlan.name,
-          currentPricePerSeat: currentPlan.monthlyPricePerSeat,
-          recommendedPricePerSeat: currentPlan.monthlyPricePerSeat,
+          currentPricePerSeat: planPrice,
+          recommendedPricePerSeat: planPrice,
           seatCount: excess,
-          formula: rightsizingFormula(excess, currentPlan.monthlyPricePerSeat, monthlySavings),
+          recommendedPlanId: currentPlan.id,
+          formula: rightsizingFormula(excess, planPrice, monthlySavings),
         };
+        
+        const realisticSeats = calculateOptimizableSeats(entry.seats, teamSize, severity === "extreme");
+        const seatsToRemove = entry.seats - realisticSeats;
+        const realisticSavings = roundCurrency(seatsToRemove * planPrice);
+        
+        const signals = [
+          `Detected ${entry.seats} seats for team of ${teamSize}`,
+          `High seat-to-spend ratio (${entry.seats} units)`,
+        ];
+        if (severity !== "none") signals.push(`Pricing mismatch detected (${severity})`);
+
+        const narrative = seatsToRemove < excess
+          ? `Some seats may not require active licenses. Conservative right-sizing could reduce your allocation by ${seatsToRemove} seat${seatsToRemove > 1 ? "s" : ""}, saving ~$${realisticSavings}/mo while maintaining operational buffer.`
+          : `You have ${entry.seats} seats but a team of ${teamSize}. Removing ${excess} excess seat${excess > 1 ? "s" : ""} at $${planPrice}/seat saves ~ $${roundCurrency(monthlySavings)}/mo.`;
+
         recommendations.push({
           type: "rightsize",
           toolId: entry.toolId,
           toolName: catalogEntry.name,
-          currentSpend: entry.monthlySpend,
-          recommendedSpend: roundCurrency(entry.monthlySpend - monthlySavings),
-          monthlySavings,
-          annualSavings: monthlyToAnnual(monthlySavings),
-          reasoning: `You have ${entry.seats} seats but a team of ${teamSize}. Removing ${excess} excess seat${excess > 1 ? "s" : ""} at $${currentPlan.monthlyPricePerSeat}/seat saves $${monthlySavings}/mo.`,
-          confidence: confidence.level,
+          currentSpend: actualSpend,
+          recommendedSpend: roundCurrency(actualSpend - realisticSavings),
+          monthlySavings: realisticSavings,
+          annualSavings: monthlyToAnnual(realisticSavings),
+          recommendedSeats: realisticSeats,
+          reasoning: narrative,
+          reasoningDetails: {
+            narrative,
+            detectedSignals: signals,
+            usageAssumptions: ["Assumes 20-40% organizational overhead for seat allocation"],
+            confidenceFactors: [
+              pricingFresh ? "Fresh catalog pricing" : "Stale catalog pricing",
+              severity === "none" ? "Consistent with public pricing" : "Custom pricing mismatch reduces certainty",
+            ],
+          },
+          assumptions: {
+            assumesPartialSeatReduction: seatsToRemove < excess,
+            assumesMigrationFeasible: true,
+          },
+          confidence,
           calculation,
+          pricingConsistency: consistency,
         });
       }
     }
-  }
+
 
   // --- Plan downgrade opportunity ---
   const currentPlanIndex = catalogEntry.plans.findIndex(
@@ -125,45 +197,91 @@ export function analyzeToolSpend(
   if (currentPlanIndex > 0) {
     // There's a cheaper plan available
     const cheaperPlan = catalogEntry.plans[currentPlanIndex - 1];
-    const currentPlan = catalogEntry.plans[currentPlanIndex];
-
-    const potentialSavings = downgradeSavings(
-      currentPlan.monthlyPricePerSeat,
-      cheaperPlan.monthlyPricePerSeat,
-      entry.seats
-    );
-
-    const currentCost = roundCurrency(currentPlan.monthlyPricePerSeat * entry.seats);
-
-    if (potentialSavings > 0 && isSignificantSavings(potentialSavings, currentCost)) {
-      const confidence = scoreConfidence(
-        downgradeConfidence(pricingFresh, true)
+    if (currentPlan) {
+      // Check if downgrade to Free is realistic for this team
+      const isFreeTier = cheaperPlan.monthlyPricePerSeat === 0;
+      const isRealistic = !isFreeTier || isFreeTierRealistic(teamSize, entry.toolId);
+      
+      const catalogPotentialSavings = downgradeSavings(
+        currentPlan.monthlyPricePerSeat,
+        cheaperPlan.monthlyPricePerSeat,
+        entry.seats
       );
-      const calculation: CalculationBreakdown = {
-        currentPlanName: currentPlan.name,
-        recommendedPlanName: cheaperPlan.name,
-        currentPricePerSeat: currentPlan.monthlyPricePerSeat,
-        recommendedPricePerSeat: cheaperPlan.monthlyPricePerSeat,
-        seatCount: entry.seats,
-        formula: downgradeFormula(
-          entry.seats,
-          currentPlan.monthlyPricePerSeat,
-          cheaperPlan.monthlyPricePerSeat,
-          potentialSavings
-        ),
-      };
-      recommendations.push({
-        type: "downgrade",
-        toolId: entry.toolId,
-        toolName: catalogEntry.name,
-        currentSpend: entry.monthlySpend,
-        recommendedSpend: roundCurrency(entry.monthlySpend - potentialSavings),
-        monthlySavings: potentialSavings,
-        annualSavings: monthlyToAnnual(potentialSavings),
-        reasoning: `Consider "${cheaperPlan.name}" plan ($${cheaperPlan.monthlyPricePerSeat}/seat) instead of "${currentPlan.name}" ($${currentPlan.monthlyPricePerSeat}/seat). Saves $${potentialSavings}/mo across ${entry.seats} seat${entry.seats > 1 ? "s" : ""}.`,
-        confidence: confidence.level,
-        calculation,
-      });
+
+      const expectedOptimizedSpend = computeExpectedSpend(cheaperPlan.monthlyPricePerSeat, entry.seats);
+      const potentialSavings = capSavingsPotential(actualSpend, expectedSpend, expectedOptimizedSpend, severity);
+      const currentCost = roundCurrency(planPrice * entry.seats);
+
+      if (potentialSavings > 0 && isSignificantSavings(catalogPotentialSavings, currentCost)) {
+        const baseConfidence = scoreConfidence(
+          downgradeConfidence(pricingFresh, isRealistic)
+        ).level;
+        
+        // Stricter confidence for unrealistic downgrades
+        const confidence = isRealistic 
+          ? degradeConfidenceForMismatch(baseConfidence, severity)
+          : "low";
+
+        const calculation: CalculationBreakdown = {
+          currentPlanName: currentPlan.name,
+          recommendedPlanName: cheaperPlan.name,
+          currentPricePerSeat: currentPlan.monthlyPricePerSeat,
+          recommendedPricePerSeat: cheaperPlan.monthlyPricePerSeat,
+          seatCount: entry.seats,
+          recommendedPlanId: cheaperPlan.id,
+          formula: downgradeFormula(
+            entry.seats,
+            planPrice,
+            cheaperPlan.monthlyPricePerSeat,
+            potentialSavings
+          ),
+        };
+        
+        const narrative = isFreeTier 
+          ? `Some seats may not require premium functionality. Evaluating usage patterns may support a partial move to the free tier for non-admin users.`
+          : `Usage patterns may support the "${cheaperPlan.name}" tier ($${cheaperPlan.monthlyPricePerSeat}/seat) over your current "${currentPlan.name}" plan. Significant features should be audited before migration.`;
+
+        const signals = [
+          `Enterprise-tier features may be underutilized for a team of ${teamSize}`,
+          `Public pricing suggests lower-cost alternatives for similar seat counts`,
+        ];
+
+        recommendations.push({
+          type: "downgrade",
+          toolId: entry.toolId,
+          toolName: catalogEntry.name,
+          currentSpend: actualSpend,
+          recommendedSpend: roundCurrency(actualSpend - potentialSavings),
+          monthlySavings: roundCurrency(potentialSavings),
+          annualSavings: monthlyToAnnual(roundCurrency(potentialSavings)),
+          recommendedSeats: entry.seats, // Downgrade keeps seats same unless rightsized later
+          reasoning: narrative,
+          reasoningDetails: {
+            narrative,
+            detectedSignals: signals,
+            pricingAnalysis: [
+              `Plan Price: $${cheaperPlan.monthlyPricePerSeat}/seat`,
+              `Current Price: $${planPrice}/seat`,
+            ],
+            usageAssumptions: [
+              isFreeTier ? "Assumes basic usage patterns for subset of team" : "Assumes feature parity for current workflow",
+              "Assumes minimal organizational resistance to plan changes",
+            ],
+            confidenceFactors: [
+              isRealistic ? "Standard organizational migration" : "High friction: Downgrade to Free tier requires audit",
+              severity === "none" ? "Aligned with public catalog" : "Custom pricing reduces prediction certainty",
+            ],
+          },
+          assumptions: {
+            assumesFeatureRedundancy: true,
+            assumesLowEnterpriseDependency: teamSize < 20,
+            assumesMigrationFeasible: isRealistic,
+          },
+          confidence,
+          calculation,
+          pricingConsistency: consistency,
+        });
+      }
     }
   }
 
@@ -174,12 +292,20 @@ export function analyzeToolSpend(
       type: "credit",
       toolId: entry.toolId,
       toolName: catalogEntry.name,
-      currentSpend: entry.monthlySpend,
-      recommendedSpend: entry.monthlySpend,
+      currentSpend: actualSpend,
+      recommendedSpend: actualSpend,
       monthlySavings: 0,
       annualSavings: 0,
+      recommendedSeats: entry.seats,
       reasoning: catalogEntry.creditNotes,
+      reasoningDetails: {
+        narrative: catalogEntry.creditNotes,
+        detectedSignals: ["Vendor offers official startup credit program"],
+        usageAssumptions: ["Assumes company meets vendor's startup eligibility criteria"],
+        confidenceFactors: ["Publicly advertised vendor program"],
+      },
       confidence: confidence.level,
+      pricingConsistency: consistency,
     });
   }
 
@@ -247,7 +373,27 @@ export function analyzeToolOverlaps(
         recommendedSpend: 0,
         monthlySavings: savings,
         annualSavings: monthlyToAnnual(savings),
-        reasoning: `You have both ${keepTool.catalog.name} and ${dropTool.catalog.name} in the same category. Consider consolidating to ${keepTool.catalog.name} to save $${savings}/mo.`,
+        recommendedSeats: 0,
+        reasoning: `Operational redundancy detected between ${keepTool.catalog.name} and ${dropTool.catalog.name}. Consolidation potential identified.`,
+        reasoningDetails: {
+          narrative: `You have multiple tools (${keepTool.catalog.name} and ${dropTool.catalog.name}) serving the ${keepTool.category} category. Consolidation into a single platform can reduce license sprawl and simplify your stack.`,
+          detectedSignals: [
+            `Overlapping functionality in ${keepTool.category}`,
+            `Duplicate subscription for ${dropTool.catalog.name}`,
+          ],
+          usageAssumptions: [
+            "Assumes feature parity between platforms",
+            "Assumes data migration between tools is feasible",
+          ],
+          confidenceFactors: [
+            "Deterministic category overlap",
+            "Functional redundancy identified",
+          ],
+        },
+        assumptions: {
+          assumesFeatureRedundancy: true,
+          assumesMigrationFeasible: false, // Set to false to lower confidence until audited
+        },
         confidence: confidence.level,
         calculation: {
           currentPlanName: dropTool.catalog.name,
@@ -330,81 +476,115 @@ function generateKeepRecommendations(
  * 6. Aggregates results into a comprehensive audit
  */
 export function generateAuditResult(input: AuditInput): AuditResult {
-  const allRecommendations: Recommendation[] = [];
+  const auditId = generateAuditId();
+  
+  // --- Phase 1-3: Run Sequential Optimization Pipeline ---
+  const { 
+    recommendations: savingsRecs, 
+    toolStates, 
+    optimizationOrder 
+  } = runOptimizationPipeline(input);
 
-  // --- Phase 1: Per-tool analysis ---
-  for (const toolEntry of input.tools) {
-    const catalogEntry = getToolById(toolEntry.toolId);
-    if (!catalogEntry) continue;
-
-    const toolRecs = analyzeToolSpend(toolEntry, input.teamSize, catalogEntry);
-    allRecommendations.push(...toolRecs);
-  }
-
-  // --- Phase 2: Cross-tool overlap/consolidation analysis ---
-  const overlapRecs = analyzeToolOverlaps(input.tools, getToolById);
-  allRecommendations.push(...overlapRecs);
-
-  // --- Phase 3: "Keep" recommendations for optimized tools ---
-  const recsWithSavings = new Set(
-    allRecommendations
-      .filter((r) => r.monthlySavings > 0)
-      .map((r) => r.toolId)
-  );
+  // --- Phase 4: Generate non-savings recommendations (Credits & Keeps) ---
+  const allRecommendations: Recommendation[] = [...savingsRecs];
+  
+  const recsWithSavings = new Set(savingsRecs.map(r => r.toolId));
   const keepRecs = generateKeepRecommendations(input.tools, recsWithSavings);
   allRecommendations.push(...keepRecs);
 
-  // --- Phase 4: Sort and assign priorities ---
-  // Sort by monthly savings descending (most impactful first)
-  // Credit and keep recs go to the bottom
+  // Add credits
+  for (const toolEntry of input.tools) {
+    const catalogEntry = getToolById(toolEntry.toolId);
+    if (catalogEntry?.hasStartupCredits && catalogEntry.creditNotes) {
+      const state = toolStates[toolEntry.toolId];
+      allRecommendations.push({
+        type: "credit",
+        toolId: toolEntry.toolId,
+        toolName: catalogEntry.name,
+        currentSpend: state.currentSpend,
+        recommendedSpend: state.currentSpend,
+        monthlySavings: 0,
+        annualSavings: 0,
+        reasoning: catalogEntry.creditNotes,
+        confidence: "medium",
+        pricingConsistency: {
+          expectedSpend: state.currentSpend,
+          actualSpend: state.currentSpend,
+          deviationPercentage: 0,
+          severity: "none",
+          customContractLikely: false,
+        }
+      });
+    }
+  }
+
+  // --- Phase 5: Sort and assign priorities ---
   allRecommendations.sort((a, b) => {
-    // Savings recommendations first
     if (a.monthlySavings !== b.monthlySavings) {
       return b.monthlySavings - a.monthlySavings;
     }
-    // Then by type weight
-    const typeWeight = { rightsize: 0, downgrade: 1, consolidate: 2, credit: 3, keep: 4 } as Record<string, number>;
+    const typeWeight = { consolidate: 0, downgrade: 1, rightsize: 2, credit: 3, keep: 4 } as Record<string, number>;
     return (typeWeight[a.type] ?? 5) - (typeWeight[b.type] ?? 5);
   });
 
-  // Assign priority ranks
   allRecommendations.forEach((rec, index) => {
     rec.priority = index + 1;
   });
 
-  // --- Phase 5: Aggregate totals ---
-  const totalMonthlySpend = input.tools.reduce(
-    (sum, t) => sum + t.monthlySpend,
-    0
-  );
-  const totalMonthlySavings = allRecommendations.reduce(
-    (sum, r) => sum + r.monthlySavings,
-    0
-  );
+  // --- Phase 6: Aggregate totals with safeguards ---
+  const totalMonthlySpend = input.tools.reduce((sum, t) => sum + t.monthlySpend, 0);
+  
+  // REAL savings are the difference between original total and final optimized total
+  const finalOptimizedSpend = Object.values(toolStates).reduce((sum, s) => sum + s.currentSpend, 0);
+  let totalMonthlySavings = totalMonthlySpend - finalOptimizedSpend;
+  
+  // Safeguard: Never allow > 100% savings or negative spend
+  totalMonthlySavings = clampSavings(totalMonthlySavings, totalMonthlySpend);
+  
   const totalAnnualSavings = monthlyToAnnual(totalMonthlySavings);
+  const usedManualOverride = input.tools.some((t) => t.isManualOverride);
+  
+  const savingsPercentage = calcSavingsPercentage(totalMonthlySavings, totalMonthlySpend);
+  const savingsRealismLevel = classifySavingsRealism(savingsPercentage);
 
-  // Detect overlaps
-  const toolCategories = input.tools
-    .map((t) => {
-      const catalog = getToolById(t.toolId);
-      return catalog ? { toolId: t.toolId, category: catalog.category } : null;
-    })
-    .filter((t): t is NonNullable<typeof t> => t !== null);
-  const overlaps = findOverlappingTools(toolCategories);
+  // Determine highest mismatch severity
+  const severityLevels = { none: 0, low: 1, medium: 2, high: 3, extreme: 4 };
+  let maxMismatchSeverity: import("@/lib/types/audit").PricingMismatchSeverity = "none";
+  for (const rec of allRecommendations) {
+    if (rec.pricingConsistency?.severity) {
+      const currentLevel = severityLevels[rec.pricingConsistency.severity];
+      const maxLevel = severityLevels[maxMismatchSeverity];
+      if (currentLevel > maxLevel) {
+        maxMismatchSeverity = rec.pricingConsistency.severity;
+      }
+    }
+  }
 
-  const optimizedToolCount = keepRecs.length;
+  // Aggregate assumptions
+  const aggregateAssumptions: import("@/lib/types/audit").OptimizationAssumptions = {
+    assumesPartialSeatReduction: allRecommendations.some(r => r.assumptions?.assumesPartialSeatReduction),
+    assumesFeatureRedundancy: allRecommendations.some(r => r.assumptions?.assumesFeatureRedundancy),
+    assumesLowEnterpriseDependency: allRecommendations.some(r => r.assumptions?.assumesLowEnterpriseDependency),
+    assumesMigrationFeasible: allRecommendations.every(r => r.assumptions?.assumesMigrationFeasible !== false),
+  };
 
   return {
-    id: generateAuditId(),
+    id: auditId,
     input,
     recommendations: allRecommendations,
     totalMonthlySpend: roundCurrency(totalMonthlySpend),
     totalMonthlySavings: roundCurrency(totalMonthlySavings),
     totalAnnualSavings,
-    savingsPercentage: calcSavingsPercentage(totalMonthlySavings, totalMonthlySpend),
+    savingsPercentage,
     createdAt: new Date().toISOString(),
     catalogVersion: pricingCatalog.version,
-    hasOverlappingTools: overlaps.size > 0,
-    optimizedToolCount,
+    hasOverlappingTools: allRecommendations.some(r => r.type === "consolidate"),
+    optimizedToolCount: keepRecs.length,
+    usedManualOverride,
+    maxMismatchSeverity,
+    optimizationOrder,
+    toolStates,
+    savingsRealismLevel,
+    aggregateAssumptions,
   };
 }

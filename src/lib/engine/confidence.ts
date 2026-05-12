@@ -99,9 +99,9 @@ export function scoreConfidence(factors: ConfidenceFactors): ConfidenceReason {
 
   // Map score to level
   let level: ConfidenceLevel;
-  if (score >= 4) {
+  if (score >= 6) {
     level = "high";
-  } else if (score >= 1) {
+  } else if (score >= 2) {
     level = "medium";
   } else {
     level = "low";
@@ -233,4 +233,40 @@ export function isPricingFresh(
   const diffMs = now.getTime() - verified.getTime();
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
   return diffDays <= stalenessThresholdDays;
+}
+
+/**
+ * Staged confidence degradation based on pricing mismatch severity.
+ * A high mismatch degrades confidence by one step.
+ * An extreme mismatch degrades it by two steps (down to low).
+ */
+export function degradeConfidenceForMismatch(
+  currentLevel: ConfidenceLevel,
+  severity: import("@/lib/types/audit").PricingMismatchSeverity
+): ConfidenceLevel {
+  if (severity === "none" || severity === "low") {
+    return currentLevel;
+  }
+  
+  if (severity === "medium") {
+    // Medium mismatch might slightly drop confidence if already on the fence,
+    // but we won't strictly enforce a drop unless it was highly certain.
+    // Let's degrade High to Medium just to be safe.
+    if (currentLevel === "high") return "medium";
+    return currentLevel;
+  }
+  
+  if (severity === "high") {
+    // High -> Medium, Medium -> Low, Low -> Low
+    if (currentLevel === "high") return "medium";
+    if (currentLevel === "medium") return "low";
+    return "low";
+  }
+  
+  if (severity === "extreme") {
+    // Extreme instantly forces lowest confidence
+    return "low";
+  }
+  
+  return currentLevel;
 }

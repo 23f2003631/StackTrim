@@ -103,13 +103,23 @@ function RecommendationCard({ rec, index }: { rec: PublicRecommendation; index: 
                 >
                   {TYPE_LABELS[rec.type] || rec.type}
                 </span>
-                <Badge
-                  variant="outline"
-                  className={`text-xs ${CONFIDENCE_COLORS[rec.confidence] || ""}`}
-                >
-                  {CONFIDENCE_LABELS[rec.confidence]}
-                </Badge>
-              </div>
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${CONFIDENCE_COLORS[rec.confidence] || ""}`}
+                  >
+                    {CONFIDENCE_LABELS[rec.confidence]}
+                  </Badge>
+                  {rec.customContractLikely && (
+                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                      Custom pricing
+                    </Badge>
+                  )}
+                  {rec.contextualNote && (
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded border border-primary/10">
+                      {rec.contextualNote}
+                    </span>
+                  )}
+                </div>
 
               <p className="text-sm leading-relaxed text-muted-foreground max-w-2xl line-clamp-2">
                 {rec.reasoning}
@@ -135,12 +145,33 @@ function RecommendationCard({ rec, index }: { rec: PublicRecommendation; index: 
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md border border-border/50"
+                  className="space-y-4 text-sm text-muted-foreground bg-muted/30 p-4 rounded-md border border-border/50"
                 >
-                  <strong>Pricing Verification:</strong> This is a deterministic
-                  recommendation based on public pricing.
-                  <br className="mb-2" />
-                  {rec.reasoning}
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground/80 mb-2">Analysis Findings</h4>
+                    <ul className="space-y-1 list-disc pl-4 text-xs">
+                      {rec.reasoningDetails?.detectedSignals.map((signal, i) => (
+                        <li key={i}>{signal}</li>
+                      ))}
+                      {!rec.reasoningDetails && <li>Verified deterministic optimization potential.</li>}
+                    </ul>
+                  </div>
+                  
+                  {rec.reasoningDetails?.usageAssumptions && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-foreground/80 mb-2">Operational Assumptions</h4>
+                      <ul className="space-y-1 list-disc pl-4 text-xs">
+                        {rec.reasoningDetails.usageAssumptions.map((assumption, i) => (
+                          <li key={i}>{assumption}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-border/50 flex items-center justify-between">
+                    <span className="text-[10px] italic">Based on StackTrim Catalog v{rec.catalogVersion || "2.0"}</span>
+                    <Badge variant="ghost" className="text-[10px] h-5 px-1.5 opacity-60">Deterministic Analysis</Badge>
+                  </div>
                 </motion.div>
               )}
             </div>

@@ -17,7 +17,10 @@ export type AnalyticsEventType =
   | "ai_summary_timeout"
   | "ai_summary_missing_key"
   | "ai_summary_provider_failed"
-  | "consultation_cta_clicked";
+  | "consultation_cta_clicked"
+  | "pricing_mismatch_detected"
+  | "catalog_pricing_reset_clicked"
+  | "manual_pricing_override_enabled";
 
 export interface AnalyticsEvent {
   type: AnalyticsEventType;

@@ -25,6 +25,8 @@ export interface ToolEntry {
   seats: number;
   /** How the tool is being used */
   useCases: string[];
+  /** Flag indicating if the user manually overrode auto-calculated pricing */
+  isManualOverride?: boolean;
 }
 
 /** Complete audit input from the spend form */
@@ -56,8 +58,50 @@ export type RecommendationType =
   | "switch-vendor"    // A cheaper alternative vendor exists
   | "review-api-usage"; // API spend may be optimizable
 
+/** What aspect of the tool state does this optimization modify? */
+export type OptimizationModifier = "plan" | "seats" | "tool" | "pricing";
+
 /** Confidence level of a recommendation */
 export type ConfidenceLevel = "high" | "medium" | "low";
+
+/** Severity of deviation between user-entered spend and expected catalog spend */
+export type PricingMismatchSeverity = "none" | "low" | "medium" | "high" | "extreme";
+
+/** Level of financial realism assigned to the overall audit result */
+export type SavingsRealismLevel = "normal" | "aggressive" | "extreme";
+
+/** Tracks specific assumptions made during the optimization process */
+export interface OptimizationAssumptions {
+  assumesPartialSeatReduction?: boolean;
+  assumesFeatureRedundancy?: boolean;
+  assumesLowEnterpriseDependency?: boolean;
+  assumesMigrationFeasible?: boolean;
+}
+
+/** Detailed operational reasoning for a recommendation */
+export interface RecommendationReasoning {
+  /** The plain-English explanation (narrative) */
+  narrative: string;
+  /** Specific signals detected (e.g., "Multiple LLM subscriptions identified") */
+  detectedSignals: string[];
+  /** Breakdown of overlap analysis if applicable */
+  overlapAnalysis?: string[];
+  /** Assumptions made about pricing for this recommendation */
+  pricingAnalysis?: string[];
+  /** Assumptions made about usage/seats for this recommendation */
+  usageAssumptions?: string[];
+  /** Factors contributing to the confidence score */
+  confidenceFactors?: string[];
+}
+
+/** Contains metadata regarding how the actual spend aligns with catalog expectations */
+export interface PricingConsistency {
+  expectedSpend: number;
+  actualSpend: number;
+  deviationPercentage: number;
+  severity: PricingMismatchSeverity;
+  customContractLikely: boolean;
+}
 
 /** Transparent breakdown of how savings were calculated */
 export interface CalculationBreakdown {
@@ -65,6 +109,8 @@ export interface CalculationBreakdown {
   currentPlanName: string;
   /** What we're comparing to */
   recommendedPlanName: string;
+  /** Machine-readable ID of the recommended plan */
+  recommendedPlanId?: string;
   /** Price per seat on current plan */
   currentPricePerSeat: number;
   /** Price per seat on recommended plan */
@@ -91,14 +137,54 @@ export interface Recommendation {
   monthlySavings: number;
   /** Annual savings = monthlySavings * 12 */
   annualSavings: number;
-  /** Plain-English explanation of why this was flagged */
+  /** [V4 Realism] The final number of seats recommended after optimization */
+  recommendedSeats?: number;
+  /** Plain-English explanation of why this was flagged (narrative) */
   reasoning: string;
+  /** [V4 Realism] Structured operational reasoning */
+  reasoningDetails?: RecommendationReasoning;
+  /** [V4 Realism] Assumptions made for this specific recommendation */
+  assumptions?: OptimizationAssumptions;
   /** How confident we are in this recommendation */
   confidence: ConfidenceLevel;
   /** Transparent calculation breakdown (omitted for non-financial recs like credits) */
   calculation?: CalculationBreakdown;
   /** Priority rank within the audit (1 = highest impact) */
   priority?: number;
+  /** Metadata regarding pricing deviation if user entered custom spend */
+  pricingConsistency?: PricingConsistency;
+  
+  /** [V3 Pipeline] What this recommendation modifies */
+  modifies?: OptimizationModifier;
+  /** [V3 Pipeline] Spend before this specific optimization was applied */
+  preOptimizationSpend?: number;
+  /** [V3 Pipeline] Spend after this specific optimization is applied */
+  postOptimizationSpend?: number;
+  /** [V3 Pipeline] Contextual note if this recommendation depends on a previous one */
+  contextualNote?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Optimization State Types (Day 8 Architecture)
+// ---------------------------------------------------------------------------
+
+/** Tracks the transformation of a tool through the optimization pipeline */
+export interface OptimizedToolState {
+  toolId: string;
+  toolName: string;
+  
+  // Original State
+  originalPlan: string;
+  originalSeats: number;
+  originalSpend: number;
+  
+  // Current (Optimized) State
+  currentPlan: string;
+  currentSeats: number;
+  currentSpend: number;
+  
+  // History
+  appliedRecommendationIds: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -129,6 +215,18 @@ export interface AuditResult {
   hasOverlappingTools: boolean;
   /** Number of tools that already look optimally priced */
   optimizedToolCount: number;
+  /** True if any tool had a manual override applied */
+  usedManualOverride: boolean;
+  /** The highest severity of pricing mismatch across the stack */
+  maxMismatchSeverity: PricingMismatchSeverity;
+  /** [V3 Pipeline] Sequential order in which optimizations were applied */
+  optimizationOrder: string[];
+  /** [V3 Pipeline] Final state of all tools after optimization */
+  toolStates: Record<string, OptimizedToolState>;
+  /** [V4 Realism] The classified realism level of identified savings */
+  savingsRealismLevel: SavingsRealismLevel;
+  /** [V4 Realism] Aggregate assumptions made across the entire audit */
+  aggregateAssumptions: OptimizationAssumptions;
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +264,9 @@ export interface PublicAuditSnapshot {
     hasOverlappingTools: boolean;
     optimizedToolCount: number;
     aiSummary?: string;
+    usedManualOverride: boolean;
+    maxMismatchSeverity: PricingMismatchSeverity;
+    savingsRealismLevel: SavingsRealismLevel;
   };
 }
 
@@ -177,6 +278,11 @@ export interface PublicRecommendation {
   confidence: ConfidenceLevel;
   monthlySavings: number;
   annualSavings: number;
+  customContractLikely?: boolean;
+  contextualNote?: string;
+  modifies?: OptimizationModifier;
+  /** [V4 Realism] Structured reasoning for public display */
+  reasoningDetails?: RecommendationReasoning;
 }
 
 // ---------------------------------------------------------------------------
