@@ -98,4 +98,3 @@ Please see [DEMO_SCENARIOS.md](DEMO_SCENARIOS.md) for pre-configured use cases p
 For deployment instructions, refer to [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
-*StackTrim — Built for operational rigor.*
