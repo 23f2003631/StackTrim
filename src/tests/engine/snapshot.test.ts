@@ -71,6 +71,12 @@ function createTestAuditResult(overrides?: Partial<AuditResult>): AuditResult {
     catalogVersion: "2026.05.2",
     hasOverlappingTools: true,
     optimizedToolCount: 0,
+    usedManualOverride: false,
+    maxMismatchSeverity: "none",
+    optimizationOrder: [],
+    toolStates: {},
+    savingsRealismLevel: "normal",
+    aggregateAssumptions: {},
     ...overrides,
   };
 }
