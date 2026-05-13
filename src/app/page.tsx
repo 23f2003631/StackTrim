@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Hero } from "@/components/landing/hero";
 import { ValueProps } from "@/components/landing/value-props";
 import { CtaSection } from "@/components/landing/cta-section";
+import { buttonVariants } from "@/components/ui/button";
 
 export default function HomePage() {
   return (
@@ -19,7 +20,7 @@ export default function HomePage() {
           </Link>
           <Link
             href="/audit"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className={buttonVariants({ variant: "default", size: "sm" })}
           >
             Start Audit →
           </Link>
@@ -40,7 +41,7 @@ export default function HomePage() {
             <p className="text-xs text-muted-foreground">
               © 2026 StackTrim. Built for{" "}
               <a
-                href="https://credex.money"
+                href="https://credex.rocks/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline underline-offset-2 hover:text-foreground transition-colors"
