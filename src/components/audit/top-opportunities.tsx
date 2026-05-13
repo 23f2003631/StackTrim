@@ -18,7 +18,6 @@ export function TopOpportunities({ snapshot }: TopOpportunitiesProps) {
   
   if (actionableRecs.length === 0) return null;
 
-  // Find the single highest savings recommendation
   const topRec = actionableRecs.reduce((prev, current) => 
     (current.monthlySavings > prev.monthlySavings) ? current : prev
   );

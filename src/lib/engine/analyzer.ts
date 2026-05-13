@@ -1,23 +1,3 @@
-/**
- * Audit Analysis Engine
- *
- * This is the core financial logic of StackTrim.
- * Every calculation here is deterministic and explainable.
- * AI never touches these numbers.
- *
- * The engine takes user input + catalog data and produces
- * actionable, conservative savings recommendations.
- *
- * Analysis pipeline:
- * 1. Per-tool analysis (rightsizing, downgrades, credits)
- * 2. Cross-tool analysis (duplicate detection, consolidation)
- * 3. "Keep" recommendations for optimized tools
- * 4. Aggregation and sorting
- *
- * @module engine/analyzer
- * @version 2.0 — Day 2: consolidation, confidence scoring, calculation breakdowns
- */
-
 import type {
   AuditInput,
   AuditResult,
@@ -68,29 +48,12 @@ import {
   isFreeTierRealistic,
 } from "@/lib/engine/realism";
 
-// ---------------------------------------------------------------------------
-// ID generation
-// ---------------------------------------------------------------------------
-
 function generateAuditId(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 8);
   return `audit_${timestamp}_${random}`;
 }
 
-// ---------------------------------------------------------------------------
-// Individual tool analysis
-// ---------------------------------------------------------------------------
-
-/**
- * Analyze a single tool entry against catalog data.
- * Returns zero or more recommendations.
- *
- * Analysis checks:
- * 1. Seat rightsizing — are they paying for more seats than team size?
- * 2. Plan downgrade — can they use a cheaper tier?
- * 3. Credit eligibility — does the vendor offer startup credits?
- */
 export function analyzeToolSpend(
   entry: ToolEntry,
   teamSize: number,
@@ -99,16 +62,15 @@ export function analyzeToolSpend(
   const recommendations: Recommendation[] = [];
   const pricingFresh = isPricingFresh(catalogEntry.lastVerified);
 
-  // --- Setup pricing consistency ---
   const currentPlan = catalogEntry.plans.find((p) => p.id === entry.planTier);
   const planPrice = currentPlan ? currentPlan.monthlyPricePerSeat : 0;
-  
+
   const expectedSpend = computeExpectedSpend(planPrice, entry.seats);
   const actualSpend = entry.monthlySpend;
   const deviation = computeDeviation(actualSpend, expectedSpend);
   const severity = classifyMismatchSeverity(deviation);
   const customContract = isCustomContractLikely(severity);
-  
+
   const consistency: Recommendation["pricingConsistency"] = {
     expectedSpend,
     actualSpend,
@@ -117,21 +79,14 @@ export function analyzeToolSpend(
     customContractLikely: customContract,
   };
 
-  // --- Seat rightsizing ---
   if (entry.seats > teamSize && currentPlan && planPrice > 0) {
     const excess = excessSeats(entry.seats, teamSize);
-    
-    // Theoretical savings if they right-sized the *catalog* amount
-    const catalogMonthlySavings = excessSeatSavings(
-      entry.seats,
-      teamSize,
-      planPrice
-    );
-    
-    // Bounded savings based on their *actual* entered spend vs extreme mismatch
+
+    excessSeatSavings(entry.seats, teamSize, planPrice);
+
     const expectedOptimizedSpend = computeExpectedSpend(planPrice, teamSize);
     const monthlySavings = capSavingsPotential(actualSpend, expectedSpend, expectedOptimizedSpend, severity);
-    
+
     if (monthlySavings > 0) {
       const baseConfidence = scoreConfidence(rightsizingConfidence(pricingFresh)).level;
       const confidence = degradeConfidenceForMismatch(baseConfidence, severity);
@@ -144,11 +99,11 @@ export function analyzeToolSpend(
           recommendedPlanId: currentPlan.id,
           formula: rightsizingFormula(excess, planPrice, monthlySavings),
         };
-        
+
         const realisticSeats = calculateOptimizableSeats(entry.seats, teamSize, severity === "extreme");
         const seatsToRemove = entry.seats - realisticSeats;
         const realisticSavings = roundCurrency(seatsToRemove * planPrice);
-        
+
         const signals = [
           `Detected ${entry.seats} seats for team of ${teamSize}`,
           `High seat-to-spend ratio (${entry.seats} units)`,
@@ -190,18 +145,15 @@ export function analyzeToolSpend(
     }
 
 
-  // --- Plan downgrade opportunity ---
   const currentPlanIndex = catalogEntry.plans.findIndex(
     (p) => p.id === entry.planTier
   );
   if (currentPlanIndex > 0) {
-    // There's a cheaper plan available
     const cheaperPlan = catalogEntry.plans[currentPlanIndex - 1];
     if (currentPlan) {
-      // Check if downgrade to Free is realistic for this team
       const isFreeTier = cheaperPlan.monthlyPricePerSeat === 0;
       const isRealistic = !isFreeTier || isFreeTierRealistic(teamSize, entry.toolId);
-      
+
       const catalogPotentialSavings = downgradeSavings(
         currentPlan.monthlyPricePerSeat,
         cheaperPlan.monthlyPricePerSeat,
@@ -216,9 +168,8 @@ export function analyzeToolSpend(
         const baseConfidence = scoreConfidence(
           downgradeConfidence(pricingFresh, isRealistic)
         ).level;
-        
-        // Stricter confidence for unrealistic downgrades
-        const confidence = isRealistic 
+
+        const confidence = isRealistic
           ? degradeConfidenceForMismatch(baseConfidence, severity)
           : "low";
 
@@ -236,8 +187,8 @@ export function analyzeToolSpend(
             potentialSavings
           ),
         };
-        
-        const narrative = isFreeTier 
+
+        const narrative = isFreeTier
           ? `Some seats may not require premium functionality. Evaluating usage patterns may support a partial move to the free tier for non-admin users.`
           : `Usage patterns may support the "${cheaperPlan.name}" tier ($${cheaperPlan.monthlyPricePerSeat}/seat) over your current "${currentPlan.name}" plan. Significant features should be audited before migration.`;
 
@@ -254,7 +205,7 @@ export function analyzeToolSpend(
           recommendedSpend: roundCurrency(actualSpend - potentialSavings),
           monthlySavings: roundCurrency(potentialSavings),
           annualSavings: monthlyToAnnual(roundCurrency(potentialSavings)),
-          recommendedSeats: entry.seats, // Downgrade keeps seats same unless rightsized later
+          recommendedSeats: entry.seats,
           reasoning: narrative,
           reasoningDetails: {
             narrative,
@@ -285,7 +236,6 @@ export function analyzeToolSpend(
     }
   }
 
-  // --- Startup credit eligibility ---
   if (catalogEntry.hasStartupCredits && catalogEntry.creditNotes) {
     const confidence = scoreConfidence(creditConfidence());
     recommendations.push({
@@ -312,24 +262,12 @@ export function analyzeToolSpend(
   return recommendations;
 }
 
-// ---------------------------------------------------------------------------
-// Cross-tool analysis: duplicate/overlap detection
-// ---------------------------------------------------------------------------
-
-/**
- * Detect overlapping tools across the user's stack.
- * If a user has multiple tools in the same category (e.g., two AI assistants),
- * suggest consolidation.
- *
- * Returns consolidation recommendations for each overlap group.
- */
 export function analyzeToolOverlaps(
   entries: ToolEntry[],
   resolveToolEntry: (toolId: string) => ToolCatalogEntry | undefined
 ): Recommendation[] {
   const recommendations: Recommendation[] = [];
 
-  // Build category map from catalog data
   const toolsWithCategories = entries
     .map((entry) => {
       const catalog = resolveToolEntry(entry.toolId);
@@ -342,15 +280,12 @@ export function analyzeToolOverlaps(
   for (const [, toolIds] of overlaps) {
     if (toolIds.length < 2) continue;
 
-    // Find the tools in this overlap group
     const overlappingTools = toolsWithCategories.filter((t) =>
       toolIds.includes(t.toolId)
     );
 
-    // Sort by spend descending — keep the most expensive (assumed most used)
     overlappingTools.sort((a, b) => b.entry.monthlySpend - a.entry.monthlySpend);
 
-    // Suggest dropping each tool except the most expensive one
     const keepTool = overlappingTools[0];
     for (let i = 1; i < overlappingTools.length; i++) {
       const dropTool = overlappingTools[i];
@@ -392,7 +327,7 @@ export function analyzeToolOverlaps(
         },
         assumptions: {
           assumesFeatureRedundancy: true,
-          assumesMigrationFeasible: false, // Set to false to lower confidence until audited
+          assumesMigrationFeasible: false,
         },
         confidence: confidence.level,
         calculation: {
@@ -410,15 +345,6 @@ export function analyzeToolOverlaps(
   return recommendations;
 }
 
-// ---------------------------------------------------------------------------
-// "Keep" recommendations for already-optimized tools
-// ---------------------------------------------------------------------------
-
-/**
- * Generate "keep" recommendations for tools that are already optimized.
- * This builds trust by showing the user we evaluated every tool honestly,
- * not just the ones where we found savings.
- */
 function generateKeepRecommendations(
   entries: ToolEntry[],
   existingRecToolIds: Set<string>
@@ -435,9 +361,8 @@ function generateKeepRecommendations(
       (p) => p.id === entry.planTier
     );
 
-    // Only generate "keep" for tools on the lowest paid plan or free plan
     const isLowestTier = currentPlanIndex <= 0;
-    const hasExcessSeats = entry.seats > 0; // Can't rightsize further
+    const hasExcessSeats = entry.seats > 0;
 
     if (isLowestTier || !hasExcessSeats) {
       keeps.push({
@@ -459,40 +384,21 @@ function generateKeepRecommendations(
   return keeps;
 }
 
-// ---------------------------------------------------------------------------
-// Full audit generation
-// ---------------------------------------------------------------------------
-
-/**
- * Generate a complete audit result from user input.
- * This is the main entry point for the analysis engine.
- *
- * The function:
- * 1. Iterates through each tool in the user's stack
- * 2. Looks up catalog data for deterministic pricing
- * 3. Runs per-tool analysis (rightsizing, downgrades, credits)
- * 4. Runs cross-tool analysis (duplicate detection, consolidation)
- * 5. Generates "keep" recs for already-optimized tools
- * 6. Aggregates results into a comprehensive audit
- */
 export function generateAuditResult(input: AuditInput): AuditResult {
   const auditId = generateAuditId();
-  
-  // --- Phase 1-3: Run Sequential Optimization Pipeline ---
-  const { 
-    recommendations: savingsRecs, 
-    toolStates, 
-    optimizationOrder 
+
+  const {
+    recommendations: savingsRecs,
+    toolStates,
+    optimizationOrder
   } = runOptimizationPipeline(input);
 
-  // --- Phase 4: Generate non-savings recommendations (Credits & Keeps) ---
   const allRecommendations: Recommendation[] = [...savingsRecs];
-  
+
   const recsWithSavings = new Set(savingsRecs.map(r => r.toolId));
   const keepRecs = generateKeepRecommendations(input.tools, recsWithSavings);
   allRecommendations.push(...keepRecs);
 
-  // Add credits
   for (const toolEntry of input.tools) {
     const catalogEntry = getToolById(toolEntry.toolId);
     if (catalogEntry?.hasStartupCredits && catalogEntry.creditNotes) {
@@ -518,7 +424,6 @@ export function generateAuditResult(input: AuditInput): AuditResult {
     }
   }
 
-  // --- Phase 5: Sort and assign priorities ---
   allRecommendations.sort((a, b) => {
     if (a.monthlySavings !== b.monthlySavings) {
       return b.monthlySavings - a.monthlySavings;
@@ -532,23 +437,19 @@ export function generateAuditResult(input: AuditInput): AuditResult {
     rec.catalogVersion = pricingCatalog.version;
   });
 
-  // --- Phase 6: Aggregate totals with safeguards ---
   const totalMonthlySpend = input.tools.reduce((sum, t) => sum + t.monthlySpend, 0);
-  
-  // REAL savings are the difference between original total and final optimized total
+
   const finalOptimizedSpend = Object.values(toolStates).reduce((sum, s) => sum + s.currentSpend, 0);
   let totalMonthlySavings = totalMonthlySpend - finalOptimizedSpend;
-  
-  // Safeguard: Never allow > 100% savings or negative spend
+
   totalMonthlySavings = clampSavings(totalMonthlySavings, totalMonthlySpend);
-  
+
   const totalAnnualSavings = monthlyToAnnual(totalMonthlySavings);
   const usedManualOverride = input.tools.some((t) => t.isManualOverride);
-  
+
   const savingsPercentage = calcSavingsPercentage(totalMonthlySavings, totalMonthlySpend);
   const savingsRealismLevel = classifySavingsRealism(savingsPercentage);
 
-  // Determine highest mismatch severity
   const severityLevels = { none: 0, low: 1, medium: 2, high: 3, extreme: 4 };
   let maxMismatchSeverity: import("@/lib/types/audit").PricingMismatchSeverity = "none";
   for (const rec of allRecommendations) {
@@ -561,7 +462,6 @@ export function generateAuditResult(input: AuditInput): AuditResult {
     }
   }
 
-  // Aggregate assumptions
   const aggregateAssumptions: import("@/lib/types/audit").OptimizationAssumptions = {
     assumesPartialSeatReduction: allRecommendations.some(r => r.assumptions?.assumesPartialSeatReduction),
     assumesFeatureRedundancy: allRecommendations.some(r => r.assumptions?.assumesFeatureRedundancy),

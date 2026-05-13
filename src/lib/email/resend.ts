@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { PublicAuditSnapshot } from "@/lib/types/audit";
 import { renderAuditEmailHtml } from "./templates/audit-report";
+import { logger } from "@/lib/observability/logger";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_mock_key");
 
@@ -12,8 +13,8 @@ interface EmailResult {
 }
 
 export async function sendAuditReportEmail(
-  email: string, 
-  slug: string, 
+  email: string,
+  slug: string,
   snapshot: PublicAuditSnapshot,
   aiSummary: string | null,
   companyName?: string
@@ -22,14 +23,8 @@ export async function sendAuditReportEmail(
   const companyGreeting = companyName ? `for ${companyName}` : "";
   const subject = `Your AI Spend Audit ${companyGreeting}`.trim();
 
-  // If we don't have a real API key, mock the email sending for local development
   if (!process.env.RESEND_API_KEY) {
-    console.log("=========================================");
-    console.log("Mock Email Dispatch:");
-    console.log(`To: ${email}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Link: ${auditUrl}`);
-    console.log("=========================================");
+    logger.info("Mock email dispatch", { to: email, subject, link: auditUrl });
     return { success: true, mocked: true };
   }
 
@@ -57,17 +52,15 @@ The StackTrim Team
     });
 
     if (error) {
-      console.error("[Email Delivery Failed] Resend API returned an error:", error);
+      logger.error("Email delivery failed", { error: error.message });
       return { success: false, error: error.message };
     }
 
-    console.log(`[Email Delivery Success] Audit report sent to ${email} (ID: ${data?.id})`);
+    logger.metric("Email delivered", { to: email, id: data?.id });
     return { success: true, id: data?.id };
   } catch (error) {
-    // Catch-all for network issues, timeouts, or unexpected crashes
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("[Email Delivery Fatal] Unexpected error dispatching email:", error);
-    // Return false instead of throwing to protect the upstream lead capture route
+    logger.error("Email delivery fatal error", { error: errorMessage });
     return { success: false, error: errorMessage };
   }
 }

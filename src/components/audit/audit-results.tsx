@@ -26,6 +26,7 @@ import { LeadCaptureForm } from "./lead-capture-form";
 import { trackEvent } from "@/lib/analytics/events";
 import { BenchmarkInsight } from "./benchmark-insight";
 import { TopOpportunities } from "./top-opportunities";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface AuditResultsProps {
   result: PublicAuditSnapshot;
@@ -66,9 +67,6 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   low: "text-slate-500",
 };
 
-import { formatCurrency } from "@/lib/utils/format";
-
-// Subtle entrance animation presets (Ramp/Mercury feel)
 const fadeUp = {
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
@@ -156,7 +154,7 @@ function RecommendationCard({ rec, index }: { rec: PublicRecommendation; index: 
                       {!rec.reasoningDetails && <li>Verified deterministic optimization potential.</li>}
                     </ul>
                   </div>
-                  
+
                   {rec.reasoningDetails?.usageAssumptions && (
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-foreground/80 mb-2">Operational Assumptions</h4>
@@ -170,7 +168,7 @@ function RecommendationCard({ rec, index }: { rec: PublicRecommendation; index: 
 
                   <div className="pt-2 border-t border-border/50 flex items-center justify-between">
                     <span className="text-[10px] italic">Based on StackTrim Catalog v{rec.catalogVersion || "2.0"}</span>
-                    <Badge variant="ghost" className="text-[10px] h-5 px-1.5 opacity-60">Deterministic Analysis</Badge>
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 opacity-60">Deterministic Analysis</Badge>
                   </div>
                 </motion.div>
               )}
@@ -195,7 +193,6 @@ function RecommendationCard({ rec, index }: { rec: PublicRecommendation; index: 
   );
 }
 
-// Skeleton for AI summary loading
 function SummarySkeleton() {
   return (
     <div className="space-y-3 animate-pulse" role="status" aria-label="Loading summary">
@@ -219,7 +216,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
 
   const referenceId = slug || result.id;
 
-  // Progressive AI summary loading — never blocks deterministic content
   useEffect(() => {
     if (result.metadata?.aiSummary) return;
     if (!referenceId) return;
@@ -229,12 +225,12 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 8000);
-        
+
         const res = await fetch(`/api/audit/${referenceId}/summary`, {
           signal: controller.signal,
         });
         clearTimeout(timeout);
-        
+
         if (res.ok && isMounted) {
           const data = await res.json();
           setAiSummary(data.summary);
@@ -254,7 +250,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
     };
   }, [referenceId, result.metadata?.aiSummary]);
 
-  // Copy share URL to clipboard
   const handleCopyLink = async () => {
     const shareUrl = `${window.location.origin}/share/${referenceId}`;
     try {
@@ -264,7 +259,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
       if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
       copyTimeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const input = document.createElement("input");
       input.value = shareUrl;
       document.body.appendChild(input);
@@ -288,7 +282,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
 
   return (
     <motion.div className="space-y-10" {...stagger} initial="initial" animate="animate">
-      {/* Header */}
       <motion.div {...fadeUp} className="flex items-center justify-between flex-wrap gap-3">
         <Link
           href="/audit"
@@ -302,7 +295,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
           New Audit
         </Link>
         <div className="flex items-center gap-2">
-          {/* Copy Share Link */}
           <button
             onClick={handleCopyLink}
             className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors bg-secondary/60 hover:bg-secondary px-3 py-1.5 rounded-md border border-border/60"
@@ -320,7 +312,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
               </>
             )}
           </button>
-          {/* PDF Export */}
           <Link
             href={`/share/${referenceId}/print`}
             onClick={() => trackEvent({ type: "pdf_exported", auditId: referenceId })}
@@ -330,14 +321,12 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
             <FileText className="h-3.5 w-3.5" />
             PDF
           </Link>
-          {/* Audit ID */}
           <span className="hidden sm:inline text-xs text-muted-foreground font-mono bg-secondary px-2 py-1 rounded-md">
             ID: {referenceId.slice(0, 8)}
           </span>
         </div>
       </motion.div>
 
-      {/* Hero Summary Cards */}
       <motion.div {...fadeUp} className="grid gap-4 sm:grid-cols-3">
         <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/50 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -387,11 +376,9 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
         </Card>
       </motion.div>
 
-      {/* Benchmarks & Insights */}
       <BenchmarkInsight snapshot={result} />
       <TopOpportunities snapshot={result} />
 
-      {/* AI Consultant Summary — progressively loaded */}
       <motion.div
         {...fadeUp}
         className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm"
@@ -418,7 +405,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
         )}
       </motion.div>
 
-      {/* Overlap Alert */}
       {result.metadata.hasOverlappingTools && (
         <motion.div
           {...fadeUp}
@@ -439,7 +425,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
 
       <Separator />
 
-      {/* Actionable Recommendations */}
       {actionableRecs.length > 0 && (
         <motion.div {...fadeUp} className="space-y-4">
           <div>
@@ -458,7 +443,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
         </motion.div>
       )}
 
-      {/* Credit Opportunities */}
       {creditRecs.length > 0 && (
         <motion.div {...fadeUp} className="space-y-4">
           <div>
@@ -478,7 +462,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
         </motion.div>
       )}
 
-      {/* Already Optimized Tools */}
       {keepRecs.length > 0 && (
         <motion.div {...fadeUp} className="space-y-4">
           <div>
@@ -497,7 +480,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
         </motion.div>
       )}
 
-      {/* Honest Empty State */}
       {result.recommendations.length === 0 && (
         <Card className="border-emerald-200 bg-emerald-50/30">
           <CardContent className="py-16 text-center">
@@ -516,7 +498,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
 
       <Separator />
 
-      {/* Lead Capture UX */}
       <motion.div {...fadeUp} className="max-w-xl mx-auto pt-4">
         <LeadCaptureForm
           auditSlug={referenceId}
@@ -524,7 +505,6 @@ export function AuditResults({ result, slug }: AuditResultsProps) {
         />
       </motion.div>
 
-      {/* Footer disclaimer */}
       <motion.div
         {...fadeUp}
         className="rounded-xl border border-border/60 bg-secondary/20 p-5 mt-12"

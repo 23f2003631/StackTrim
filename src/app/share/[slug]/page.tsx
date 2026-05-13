@@ -56,13 +56,12 @@ export default async function SharePage({
   const supabase = createAdminClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error, status } = await (supabase.from("audits") as any)
+  const { data, error } = await (supabase.from("audits") as any)
     .select("public_snapshot")
     .eq("slug", slug)
     .single();
 
   if (error || !data) {
-    console.error("SharePage error fetching audit:", { slug, error, status });
     notFound();
   }
 
@@ -70,7 +69,6 @@ export default async function SharePage({
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Navigation */}
       <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
@@ -87,14 +85,12 @@ export default async function SharePage({
         </div>
       </nav>
 
-      {/* Audit Results */}
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-6 py-12 sm:py-16">
           <AuditResults result={snapshot} slug={slug} />
         </div>
       </main>
 
-      {/* Trust Footer for Share Pages */}
       <footer className="border-t border-border/40 py-6">
         <div className="mx-auto max-w-4xl px-6">
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">

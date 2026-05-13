@@ -23,7 +23,7 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email");
-    const website_url = formData.get("website_url"); // Honeypot
+    const website_url = formData.get("website_url");
     const consultationIntent = formData.get("consultationIntent") === "on";
 
     try {
@@ -32,7 +32,7 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          website_url, // Honeypot field
+          website_url,
           consultationIntent,
           auditSlug,
         }),
@@ -88,7 +88,6 @@ export function LeadCaptureForm({ auditSlug, isHighSavings }: LeadCaptureFormPro
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
-        {/* Honeypot field - invisible to real users */}
         <div aria-hidden="true" className="hidden">
           <input type="url" name="website_url" tabIndex={-1} autoComplete="off" />
         </div>

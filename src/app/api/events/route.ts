@@ -40,8 +40,7 @@ export async function POST(req: Request) {
     const { type, auditId, metadata } = parsed.data;
 
     const supabase = createAdminClient();
-    
-    // Using any-cast to avoid deep type matching issues with Supabase generated types
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from("events") as any).insert({
       event_type: type,
@@ -51,7 +50,6 @@ export async function POST(req: Request) {
 
     if (error) {
       logger.error("Failed to persist event to Supabase", { type, error });
-      // We don't fail the client request on analytics failure
     } else {
       logger.metric("Analytics event tracked", { type, auditId });
     }
@@ -59,7 +57,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     logger.error("Event API error", { error });
-    // Silently succeed so clients don't crash
     return NextResponse.json({ success: true }, { status: 200 });
   }
 }

@@ -1,9 +1,3 @@
-/**
- * Structured Operational Logger.
- * Replaces generic console.log with JSON-friendly structured formats
- * suitable for log aggregators (Datadog, CloudWatch, etc.)
- */
-
 type LogLevel = "info" | "warn" | "error" | "metric";
 
 interface LogPayload {
@@ -22,20 +16,18 @@ function emit(level: LogLevel, message: string, context?: Record<string, unknown
     timestamp: new Date().toISOString(),
   };
 
-  // In production, this would format as JSON for external aggregators.
-  // In development, we keep it readable.
   if (process.env.NODE_ENV === "production") {
     console[level === "metric" ? "info" : level](JSON.stringify(payload));
   } else {
     const formattedContext = context ? `\n${JSON.stringify(context, null, 2)}` : "";
     const color =
       level === "error"
-        ? "\x1b[31m" // red
+        ? "\x1b[31m"
         : level === "warn"
-        ? "\x1b[33m" // yellow
+        ? "\x1b[33m"
         : level === "metric"
-        ? "\x1b[36m" // cyan
-        : "\x1b[32m"; // green
+        ? "\x1b[36m"
+        : "\x1b[32m";
 
     console[level === "metric" ? "info" : level](
       `[${payload.timestamp}] ${color}[${level.toUpperCase()}]\x1b[0m ${message}${formattedContext}`

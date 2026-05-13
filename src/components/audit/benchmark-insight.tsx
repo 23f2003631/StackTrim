@@ -13,10 +13,8 @@ interface BenchmarkInsightProps {
 export function BenchmarkInsight({ snapshot }: BenchmarkInsightProps) {
   if (!flags.enableBenchmarks) return null;
 
-  // Simple, believable deterministic benchmark logic
-  // A startup stack with > 20% savings is "high waste", < 5% is "highly optimized"
   const savingsPercent = snapshot.savingsPercentage;
-  
+
   let insightHeadline = "";
   let insightText = "";
   let isOptimized = false;

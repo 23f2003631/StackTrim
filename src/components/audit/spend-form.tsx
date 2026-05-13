@@ -78,13 +78,13 @@ export function SpendForm() {
     name: "tools",
   });
 
-  // LocalStorage persistence
+
   useEffect(() => {
     const frame = requestAnimationFrame(() => setIsMounted(true));
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  // LocalStorage persistence
+
   useEffect(() => {
     if (!isMounted) return;
     
@@ -92,9 +92,7 @@ export function SpendForm() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Only restore if valid structure exists
         if (parsed && Array.isArray(parsed.tools)) {
-          // Reset form with saved values, keeping default structure if missing fields
           Object.keys(parsed).forEach((key) => {
             const field = key as keyof AuditInputForm;
             setValue(field, parsed[field]);
@@ -111,7 +109,7 @@ export function SpendForm() {
     watchRef.current = watch;
   }, [watch]);
 
-  // Save on changes
+
   useEffect(() => {
     if (isMounted) {
       const subscription = watchRef.current((value) => {
@@ -141,10 +139,9 @@ export function SpendForm() {
 
       const { slug } = await response.json();
       
-      // Clear persistence on success
+
       localStorage.removeItem("stacktrim_form_state");
       
-      // Redirect to public result page
       router.push(`/share/${slug}`);
     } catch (error) {
       console.error("Submission error:", error);
@@ -154,17 +151,17 @@ export function SpendForm() {
     }
   }
 
-  // Prevent hydration mismatch by not rendering form until mounted
+
   if (!isMounted) {
     return null;
   }
 
-  // Show premium loading state during audit submission
+
   if (isAnalyzing) {
     return <AuditLoading />;
   }
 
-  // Get available plans for a selected tool
+
   function getPlansForTool(toolId: string) {
     const tool = getToolById(toolId);
     return tool?.plans ?? [];
@@ -179,7 +176,7 @@ export function SpendForm() {
           <AlertDescription>{serverError}</AlertDescription>
         </Alert>
       )}
-      {/* Company & Team Info */}
+
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base font-semibold">
@@ -220,7 +217,7 @@ export function SpendForm() {
         </CardContent>
       </Card>
 
-      {/* Tool Entries */}
+
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -257,7 +254,7 @@ export function SpendForm() {
             <Card key={field.id} className="relative">
               <CardContent className="pt-6">
                 
-                {/* Mismatch Logic */}
+
                 {(() => {
                   const toolData = watchedTools?.[index];
                   const isManualOverride = toolData?.isManualOverride;
@@ -276,7 +273,7 @@ export function SpendForm() {
                   return (
                     <>
                       <div className="grid gap-4 sm:grid-cols-2">
-                  {/* Tool Select */}
+
                   <div className="space-y-2">
                     <Label className="text-sm">Tool</Label>
                     <Select
@@ -285,7 +282,7 @@ export function SpendForm() {
                         setValue(`tools.${index}.toolId`, value ?? "");
                         setValue(`tools.${index}.planTier`, "");
                         
-                        // Check if we can auto-calculate
+
                         const tool = getValues(`tools.${index}`);
                         if (!tool.isManualOverride && value && tool.planTier && tool.seats) {
                           const price = getPlanPrice(value, tool.planTier);
@@ -311,7 +308,7 @@ export function SpendForm() {
                     )}
                   </div>
 
-                  {/* Plan Select */}
+
                   <div className="space-y-2">
                     <Label className="text-sm">Plan</Label>
                     <Select
@@ -319,7 +316,7 @@ export function SpendForm() {
                       onValueChange={(value: string | null) => {
                         setValue(`tools.${index}.planTier`, value ?? "");
                         
-                        // Check if we can auto-calculate
+
                         const tool = getValues(`tools.${index}`);
                         if (!tool.isManualOverride && tool.toolId && value && tool.seats) {
                           const price = getPlanPrice(tool.toolId, value);
@@ -354,7 +351,7 @@ export function SpendForm() {
                     )}
                   </div>
 
-                  {/* Monthly Spend */}
+
                   <div className="space-y-2">
                     <Label className="text-sm">Monthly spend ($)</Label>
                     <Input
@@ -380,7 +377,7 @@ export function SpendForm() {
                     )}
                   </div>
 
-                  {/* Seats */}
+
                   <div className="space-y-2">
                     <Label className="text-sm">Seats</Label>
                     <Input
@@ -407,7 +404,7 @@ export function SpendForm() {
                   </div>
                 </div>
 
-                {/* Premium Trust Warning */}
+
                 {isMismatch && isManualOverride && (
                   <div className="mt-4 flex items-start gap-3 rounded-md bg-amber-50/50 p-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-500/20">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
@@ -436,7 +433,7 @@ export function SpendForm() {
                   </div>
                 )}
                 
-                {/* Remove button */}
+
                 {fields.length > 1 && (
                   <div className="mt-4 flex justify-end">
                     <Button
@@ -460,7 +457,7 @@ export function SpendForm() {
         })}
       </div>
 
-      {/* Submit */}
+
       <div className="flex justify-end">
         <Button
           type="submit"

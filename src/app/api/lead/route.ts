@@ -17,14 +17,12 @@ const leadSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    // 1. Abuse Protection: Payload Size
     const contentLength = req.headers.get("content-length");
     if (isPayloadTooLarge(contentLength)) {
       logger.warn("Payload too large in lead capture", { contentLength });
       return NextResponse.json({ error: "Payload too large" }, { status: 413 });
     }
 
-    // 2. Abuse Protection: Rate Limiting
     const ip = req.headers.get("x-forwarded-for") ?? "unknown";
     if (!checkRateLimit(ip)) {
       logger.warn("Rate limit exceeded in lead capture", { ip });
@@ -33,14 +31,11 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    // 3. Abuse Protection: Honeypot
     if (isHoneypotTriggered(body)) {
-      // Silently succeed for bots
       logger.info("Honeypot triggered in lead capture", { ip });
       return NextResponse.json({ success: true }, { status: 201 });
     }
 
-    // 4. Validate Input
     const parsed = leadSchema.safeParse(body);
     if (!parsed.success) {
       logger.warn("Invalid lead data", { error: parsed.error.format() });
@@ -53,7 +48,6 @@ export async function POST(req: Request) {
     const leadData = parsed.data;
     const supabase = createAdminClient();
 
-    // 5. Look up the audit ID, snapshot, and metadata from the slug
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: audit, error: auditError } = await (supabase.from("audits") as any)
       .select("id, public_snapshot, metadata")
@@ -67,7 +61,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 6. Insert lead into Supabase
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: dbError } = await (supabase.from("leads") as any).insert({
       email: leadData.email,
@@ -87,27 +80,24 @@ export async function POST(req: Request) {
       );
     }
 
-    // 6.5 Track Analytics
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase.from("events") as any).insert({
       event_type: "lead_captured",
       audit_id: audit.id,
       event_data: { consultationIntent: leadData.consultationIntent },
     });
-    
+
     logger.metric("Lead captured successfully", { auditId: audit.id });
 
-    // 7. Send Transactional Email asynchronously/safely
     const emailResult = await sendAuditReportEmail(
-      leadData.email, 
-      leadData.auditSlug, 
+      leadData.email,
+      leadData.auditSlug,
       audit.public_snapshot as unknown as PublicAuditSnapshot,
       (audit.metadata as Record<string, unknown>)?.aiSummary as string || null,
       leadData.companyName
     );
 
     if (!emailResult.success) {
-      // We don't fail the API request if the email fails. The lead is saved.
       logger.warn("Lead saved, but email dispatch failed", { error: emailResult.error, email: leadData.email });
     }
 

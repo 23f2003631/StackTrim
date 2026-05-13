@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { PublicAuditSnapshot, PublicRecommendation } from "@/lib/types/audit";
+import { formatCurrency, formatDate } from "@/lib/utils/format";
 
 interface PrintAuditViewProps {
   snapshot: PublicAuditSnapshot;
@@ -9,8 +10,6 @@ interface PrintAuditViewProps {
   aiSummary: string | null;
   createdAt: string;
 }
-
-import { formatCurrency, formatDate } from "@/lib/utils/format";
 
 const TYPE_LABELS: Record<string, string> = {
   downgrade: "Downgrade",
@@ -86,7 +85,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://stacktrim.dev";
 
   useEffect(() => {
-    // Auto-trigger print dialog after layout renders
     const timer = setTimeout(() => {
       window.print();
     }, 600);
@@ -95,9 +93,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
 
   return (
     <div className="print-page min-h-screen bg-white text-gray-900">
-
-
-      {/* Header */}
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-gray-200 mb-8">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-900">
@@ -114,7 +109,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
         </div>
       </header>
 
-      {/* Summary Metrics */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
         <div className="bg-emerald-50 rounded-lg p-5 border border-emerald-200">
           <p className="text-xs font-medium text-emerald-700 mb-1">Monthly Savings</p>
@@ -141,7 +135,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
         </div>
       </section>
 
-      {/* AI Summary */}
       {aiSummary && (
         <section className="mb-8 bg-gray-50/50 rounded-lg p-5 border border-gray-200">
           <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Executive Summary</h2>
@@ -151,7 +144,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
         </section>
       )}
 
-      {/* Page 2: Methodology & Trust Modeling (Executive Context) */}
       <section className="mb-12 page-break-after">
         <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4">Audit Methodology & Trust Modeling</h2>
         <div className="grid grid-cols-2 gap-8">
@@ -190,7 +182,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
         </div>
       </section>
 
-      {/* Actionable Recommendations */}
       {actionableRecs.length > 0 && (
         <section className="mb-8">
           <h2 className="text-base font-semibold text-gray-900 mb-4">
@@ -206,7 +197,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
         </section>
       )}
 
-      {/* Already Optimized */}
       {keepRecs.length > 0 && (
         <section className="mb-8">
           <h2 className="text-base font-semibold text-gray-900 mb-4">
@@ -222,7 +212,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
         </section>
       )}
 
-      {/* Footer */}
       <footer className="pt-6 border-t border-gray-200 mt-12">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div className="text-xs text-gray-400 space-y-1">
@@ -241,7 +230,6 @@ export function PrintAuditView({ snapshot, slug, aiSummary, createdAt }: PrintAu
         </div>
       </footer>
 
-      {/* Back Button (screen only) */}
       <div className="no-print mt-8 flex justify-center gap-4">
         <a
           href={`/share/${slug}`}

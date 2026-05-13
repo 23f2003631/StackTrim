@@ -1,13 +1,6 @@
-/**
- * Zod validation schemas for audit input.
- * Used by React Hook Form for client-side validation
- * and by API routes for server-side validation.
- */
-
 import { z } from "zod";
 import { MAX_TOOLS_PER_AUDIT, MIN_TEAM_SIZE, MAX_TEAM_SIZE } from "@/lib/constants";
 
-/** Schema for a single tool entry */
 export const toolEntrySchema = z.object({
   toolId: z.string().min(1, "Please select a tool"),
   planTier: z.string().min(1, "Please select a plan"),
@@ -24,7 +17,6 @@ export const toolEntrySchema = z.object({
   isManualOverride: z.boolean().default(false).optional(),
 });
 
-/** Schema for the full audit form */
 export const auditInputSchema = z.object({
   companyName: z.string().max(100, "Company name too long").optional(),
   teamSize: z
@@ -38,6 +30,5 @@ export const auditInputSchema = z.object({
     .max(MAX_TOOLS_PER_AUDIT, `Maximum ${MAX_TOOLS_PER_AUDIT} tools per audit`),
 });
 
-/** TypeScript type inferred from the schema */
 export type AuditInputForm = z.infer<typeof auditInputSchema>;
 export type ToolEntryForm = z.infer<typeof toolEntrySchema>;

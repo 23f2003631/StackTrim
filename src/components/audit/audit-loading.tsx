@@ -52,7 +52,6 @@ export function AuditLoading() {
             </motion.p>
           </AnimatePresence>
         </div>
-        {/* Progress dots */}
         <div className="flex items-center justify-center gap-1.5">
           {PHASES.map((_, i) => (
             <div

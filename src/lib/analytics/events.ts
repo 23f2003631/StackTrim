@@ -1,8 +1,3 @@
-/**
- * Core event tracking architecture.
- * Supports strongly typed events to prevent analytics drift.
- */
-
 export type AnalyticsEventType =
   | "audit_started"
   | "audit_completed"
@@ -28,24 +23,17 @@ export interface AnalyticsEvent {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Client-side tracking utility.
- * Posts to our internal `/api/events` route so credentials never leak.
- */
 export async function trackEvent(event: AnalyticsEvent) {
   try {
-    // Only track in browser environment to avoid SSR double-firing
     if (typeof window === "undefined") return;
 
     await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(event),
-      // Use keepalive so it completes even if the user navigates away
-      keepalive: true, 
+      keepalive: true,
     });
-  } catch (error) {
-    // Silently fail in client so we don't break the user experience
-    console.error("Failed to track event:", error);
+  } catch {
+    // Silently fail to avoid breaking the user experience
   }
 }

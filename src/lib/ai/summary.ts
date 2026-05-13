@@ -2,13 +2,9 @@ import { GoogleGenAI } from "@google/genai";
 import { PublicAuditSnapshot } from "../types/audit";
 import { AnalyticsEventType } from "../analytics/events";
 
-/**
- * Generates a deterministic fallback summary when AI generation fails or times out.
- * This ensures the product experience never breaks.
- */
 function generateFallbackSummary(snapshot: PublicAuditSnapshot): string {
   const { toolCount, totalMonthlySpend, totalMonthlySavings, recommendations } = snapshot;
-  
+
   if (totalMonthlySavings === 0) {
     return `Your stack of ${toolCount} tools ($${totalMonthlySpend}/mo) appears highly optimized. We did not identify any immediate cost-saving opportunities. Continue monitoring your usage as your team scales.`;
   }
@@ -17,11 +13,6 @@ function generateFallbackSummary(snapshot: PublicAuditSnapshot): string {
   return `We analyzed your stack of ${toolCount} tools ($${totalMonthlySpend}/mo) and identified ${recCount} optimization opportunit${recCount === 1 ? 'y' : 'ies'}. By implementing these recommendations, you could potentially save $${totalMonthlySavings} per month while maintaining operational efficiency.`;
 }
 
-/**
- * Generates an AI-powered personalized audit summary using Gemini.
- * Uses a strict 4-second timeout to prevent blocking the UI.
- * Gracefully falls back to deterministic text on any failure.
- */
 export interface SummaryResult {
   summary: string;
   status: AnalyticsEventType;
@@ -30,9 +21,7 @@ export interface SummaryResult {
 export async function generateAuditSummary(snapshot: PublicAuditSnapshot): Promise<SummaryResult> {
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-  // If no API key is present in dev environment, return fallback immediately
   if (!GEMINI_API_KEY) {
-    console.warn("No GEMINI_API_KEY found. Using deterministic fallback summary.");
     return {
       summary: generateFallbackSummary(snapshot),
       status: "ai_summary_missing_key"
@@ -93,9 +82,9 @@ ${JSON.stringify({
     clearTimeout(timeoutId);
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("AI Summary Generation Failed:", errorMessage);
-    
+
     let status: AnalyticsEventType = "ai_summary_provider_failed";
-    
+
     if (errorMessage.includes("Timeout") || errorMessage.includes("abort")) {
       status = "ai_summary_timeout";
     } else if (errorMessage.toLowerCase().includes("quota") || errorMessage.includes("429")) {
